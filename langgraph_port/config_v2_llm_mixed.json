@@ -1,0 +1,20 @@
+{
+  "conditions": [
+    "wal",
+    "baseline",
+    "deterministic"
+  ],
+  "episodes_per_condition": 60,
+  "fresh_timeout_s": 180,
+  "marker_sleep_ms": 30,
+  "p_crash_mid_fanout": 0.5,
+  "p_crash_post_branch": 0.25,
+  "p_plan_shift": 0.3,
+  "p_reword": 0.5,
+  "recover_timeout_s": 240,
+  "retry_backoff_s": 1.0,
+  "seed": 20261011,
+  "server_host": "127.0.0.1",
+  "server_port": 8768,
+  "watchdog_poll_ms": 2
+}

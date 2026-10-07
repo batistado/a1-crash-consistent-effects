@@ -10,7 +10,13 @@ A two-round evidence-gathering agent:
 - **Round 1** — the supervisor *decides*: fan out again (p=0.6) or **escalate** (p=0.4: a single alert effect on a different branch).
 - Then finalize.
 
-All supervisor/planner decisions are scripted from the episode seed. Honest scoping: the fault under study is **harness-side crash consistency** (branch/fan-out/retry crash windows), not agent cognition — an LLM planner would add $cost and nondeterminism without changing the fault class.
+All supervisor/planner decisions are scripted from the episode seed in the
+base variant. Honest scoping: the fault under study is **harness-side crash
+consistency** (branch/fan-out/retry crash windows), not agent cognition — a
+deterministic planner is the right cost/validity trade (no API spend, fully
+reproducible). A real-LLM planner variant exists (see "Planner variants"
+below) that re-runs the identical experiment with round-1 routing decided by
+gpt-4o-mini.
 
 ## Graph features (all genuine LangGraph)
 
@@ -35,9 +41,24 @@ All supervisor/planner decisions are scripted from the episode seed. Honest scop
 
 ## What v2 deliberately does NOT test
 
-- LLM-driven planning/cognition (scripted; fault class is harness-side).
 - Cross-process worker concurrency races (workers are threads in one process; the crash-stop model holds — recovery starts only after SIGKILL).
 - Multi-crash episodes (one crash per episode, same as v1 and the sandbox).
+
+## Planner variants
+
+- **scripted** (default, `$0`): round-1 route drawn from the episode seed
+  (`P_ROUND1_FANOUT = 0.6`). Fully reproducible; the fault class is
+  harness-side, so this is the primary variant.
+- **llm** (`--planner llm`, gpt-4o-mini, temperature 0): the round-1 routing
+  decision is a real model judgment call. Constraints: the model plans
+  *routes only* and **never sees the raw claim log**; in the recovery
+  generation it is consulted *after* deterministic reconciliation
+  (`recover_node`) with the reconciled branch state as its context. Round 0
+  stays structural (always fan_out) in both variants. Decisions are persisted
+  per episode (`decisions.jsonl` + `scenario.json`), and ground-truth scoring
+  is built from the actual decisions, not the scripted generator. On
+  persistent API failure the planner falls back to `fan_out` (logged).
+  Campaign hard stop: $5 OpenAI API (actual 2026-10-07 run: $0.0069).
 
 ## Deliverables
 

@@ -34,6 +34,7 @@ that is the thing shown insufficient), and any LLM planner (scripted
 decisions; the fault under study is harness-side, see DESIGN_V2.md).
 """
 import operator
+import json
 import os
 import random
 import time
@@ -70,6 +71,7 @@ class AgentStateV2(TypedDict, total=False):
     retry_backoff_s: float
     p_reword: float
     p_plan_shift: float
+    planner: str             # scripted | llm (round-1 routing decision source)
     scenario: dict
     round: int
     route: str
@@ -275,8 +277,54 @@ def recover_node(state):
     return {"epoch": new_epoch, "scenario": scenario, "round": 0}
 
 
+def _persist_llm_decision(state, route, meta):
+    """Durably record the LLM's round-1 routing decision.
+
+    1. scenario.json: the recovery generation reads this for the wal
+       log-fenced branch-state recomputation, so it must reflect the ACTUAL
+       route, not the scripted placeholder written by plan_node.
+    2. decisions.jsonl: audit trail + ground-truth source for the harness.
+    The claim log is never consulted here (and never shown to the model).
+    """
+    run_dir = state["run_dir"]
+    spath = os.path.join(run_dir, "scenario.json")
+    doc = read_json(spath, {"scenario": {"rounds": []}})
+    for rd in doc.get("scenario", {}).get("rounds", []):
+        if rd.get("round") == 1:
+            rd["route"] = route
+            rd["branches"] = ([0, 1, 2] if route == "fan_out" else ["esc"])
+    atomic_write_json(spath, {**doc, "llm_planner": True,
+                              "llm_route1": route})
+    dpath = os.path.join(run_dir, "decisions.jsonl")
+    rec = {"round": 1, "mode": state["mode"], "route": route,
+           "ts": time.time(), **meta}
+    with open(dpath, "a") as f:
+        f.write(json.dumps(rec) + "\n")
+    # Return the updated scenario: the caller must feed it back into the
+    # LangGraph state, because dispatch_node reads state["scenario"]
+    # (in-memory), not the file. Without this, dispatch would use the
+    # scripted placeholder route still in memory.
+    return doc["scenario"]
+
+
 def supervisor_node(state):
-    route = supervisor_route(state["scenario"], state["round"])
+    if state.get("planner") == "llm" and state["round"] == 1:
+        # Real-LLM routing decision. Round 0 stays structural (always
+        # fan_out, as in the scripted scenario); round 1 is the genuine
+        # routing judgment. The model receives only the reconciled branch
+        # state -- in recover mode, recover_node (deterministic
+        # reconciliation) has already run before this node.
+        import llm_planner
+        settled = set(_read_branch_state(state["run_dir"])["branches"])
+        route, meta = llm_planner.decide_route(
+            1, settled, state["mode"], state["run_dir"])
+        scenario = _persist_llm_decision(state, route, meta)
+        # The BRANCH marker is the post-branch-decision crash window:
+        # decision durable in the watchdog's sight, tool not yet invoked.
+        _marker(state, f"BRANCH route={route} round={state['round']}")
+        return {"route": route, "scenario": scenario}
+    else:
+        route = supervisor_route(state["scenario"], state["round"])
     # The BRANCH marker is the post-branch-decision crash window:
     # decision durable in the watchdog's sight, tool not yet invoked.
     _marker(state, f"BRANCH route={route} round={state['round']}")

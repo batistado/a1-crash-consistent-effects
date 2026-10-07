@@ -248,3 +248,45 @@ spend, verdict. Newest at the bottom. Times in PDT unless noted.
 - Spend: $0. Verdict: NOT submittable today. After LLM run + manuscript,
   remaining: humanize v2/LLM reports, commit+push final state, update
   DESIGN_V2.md, pre-submission overlap re-check. Evidence base complete.
+
+## 2026-10-07 ~02:35 PDT — Real-LLM-planner v2 run COMPLETE (last planned A1 experiment)
+- Config: v2 "research assistant" graph, `--planner llm` (gpt-4o-mini,
+  temp 0, decides round-1 route only; never sees the raw claim log —
+  deterministic recover_node reconciliation runs first in both
+  generations). 180 eps (60/condition), seed 20261011, real SIGKILL,
+  crash points mid_fanout/post_branch/retry_backoff, tool server :8767.
+- Result: headline-identical to scripted v2 in all 3 conditions —
+  wal 0.0000 dups / 1.0000 exactly-once (60/60), baseline 0.80 dups
+  (48/60) / 0.20 exactly-once, deterministic keys 0.0000 / 1.0000.
+  0 missed crashes, 0 recovery failures, zombie probes fenced 60/60
+  (HTTP+file) per condition. 0 missing effects anywhere.
+- Behavior: LLM chose fan_out 214/214 (0 escalations, 0 fallbacks);
+  fresh/recover generations agreed 34/34 on post_branch episodes.
+  Honest limitation: escalate path unexercised in this run (validated in
+  scripted v2 at ~40%); model systematically more fan-out-leaning than
+  scripted 60/40.
+- Bugs (both fixed, run restarted clean): (1) LLM decision persisted to
+  scenario.json but in-memory LangGraph state kept the scripted
+  placeholder — dispatch fanned out stale ["esc"]; caught at ep 3 via
+  impossible wal duplicates; (2) `planner` undeclared in AgentStateV2 so
+  LangGraph silently dropped it (smoke test caught: 0 model calls).
+- Spend: $0.0069 OpenAI (214 calls; 0.14% of the $5 campaign cap).
+- Deliverables: langgraph_port/LANGGRAPH_PORT_V2_LLM.md (full report +
+  scripted-vs-LLM comparison); DESIGN_V2.md updated (planner variants
+  section; stale "scripted planner" prose replaced).
+- Verdict: PASS — protocol is planner-agnostic in practice, not just
+  theory. Empirical package complete (sandbox 1500eps/cond, 2-model LLM
+  validation, ablations, LangGraph v1, v2 scripted, v2 real-LLM).
+  Next: push v2+LLM reports to GitHub, then IEEEtran manuscript draft.
+
+## 2026-10-07 — Real-LLM supervisor MIXED-distribution follow-up LAUNCHED
+- Why: the temp-0 LLM run (180/180 fan_out, 0 escalate) tested the protocol
+  under a uniform route distribution only. This run samples the same prompt
+  and scenario at temperature=1.0 so the model's genuine route mix is tested.
+- What changed: llm_planner.TEMPERATURE now reads LLM_PLANNER_TEMP env
+  (default 0.0); run launched with LLM_PLANNER_TEMP=1.0. Same seed 20261011
+  (identical episodes/crash points — only the routing distribution differs),
+  run-tag v2_llm_mixed, tool server :8768, $5 cap.
+- Outputs: results_langgraph_v2_llm_mixed.json(.jsonl); log
+  logs/crash_v2_llm_mixed.log (detached, stderr captured).
+- Verdict: RUNNING.

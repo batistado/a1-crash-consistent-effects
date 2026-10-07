@@ -32,6 +32,10 @@ def main():
     ap.add_argument("--retry-backoff-s", type=float, default=1.0)
     ap.add_argument("--p-reword", type=float, default=0.5)
     ap.add_argument("--p-plan-shift", type=float, default=0.3)
+    ap.add_argument("--planner", choices=["scripted", "llm"],
+                    default="scripted",
+                    help="round-1 routing decision source: scripted (default) "
+                         "or real gpt-4o-mini via the custom.openai connector")
     args = ap.parse_args()
 
     os.makedirs(args.run_dir, exist_ok=True)
@@ -48,6 +52,7 @@ def main():
         "retry_backoff_s": args.retry_backoff_s,
         "p_reword": args.p_reword,
         "p_plan_shift": args.p_plan_shift,
+        "planner": args.planner,
         "round": 0,
         "error": None,
     }
