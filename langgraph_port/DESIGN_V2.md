@@ -16,7 +16,9 @@ consistency** (branch/fan-out/retry crash windows), not agent cognition — a
 deterministic planner is the right cost/validity trade (no API spend, fully
 reproducible). A real-LLM planner variant exists (see "Planner variants"
 below) that re-runs the identical experiment with round-1 routing decided by
-gpt-4o-mini.
+gpt-4o-mini — including a mixed-distribution campaign (temperature 1.0) whose
+genuine 135-escalate / 79-fan_out split is the primary reported supervisor
+result.
 
 ## Graph features (all genuine LangGraph)
 
@@ -49,16 +51,29 @@ gpt-4o-mini.
 - **scripted** (default, `$0`): round-1 route drawn from the episode seed
   (`P_ROUND1_FANOUT = 0.6`). Fully reproducible; the fault class is
   harness-side, so this is the primary variant.
-- **llm** (`--planner llm`, gpt-4o-mini, temperature 0): the round-1 routing
-  decision is a real model judgment call. Constraints: the model plans
-  *routes only* and **never sees the raw claim log**; in the recovery
-  generation it is consulted *after* deterministic reconciliation
-  (`recover_node`) with the reconciled branch state as its context. Round 0
-  stays structural (always fan_out) in both variants. Decisions are persisted
-  per episode (`decisions.jsonl` + `scenario.json`), and ground-truth scoring
-  is built from the actual decisions, not the scripted generator. On
-  persistent API failure the planner falls back to `fan_out` (logged).
-  Campaign hard stop: $5 OpenAI API (actual 2026-10-07 run: $0.0069).
+- **llm** (`--planner llm`, gpt-4o-mini): the round-1 routing decision is a
+  real model judgment call. Constraints: the model plans *routes only* and
+  **never sees the raw claim log**; in the recovery generation it is consulted
+  *after* deterministic reconciliation (`recover_node`) with the reconciled
+  branch state as its context. Round 0 stays structural (always fan_out) in
+  both variants. Decisions are persisted per episode (`decisions.jsonl` +
+  `scenario.json`), and ground-truth scoring is built from the actual
+  decisions, not the scripted generator. On persistent API failure the
+  planner falls back to `fan_out` (logged). Campaign hard stop: $5 OpenAI
+  API.
+  - 2026-10-07 temp-0 run (180 eps): $0.0069, 214 judgments, 0 fallbacks —
+    but the model chose fan_out in all 180 episodes (degenerate prompt: it
+    showed identical evidence every episode, so fan_out was the only rational
+    answer).
+  - 2026-10-07 temp-1.0 mixed campaign (180 eps, same seed 20261011):
+    prompt fixed with seeded per-episode evidence profiles
+    (`evidence_summary`, deterministic in plan_seed so fresh/recover judge
+    identical evidence) plus a cost-aware decision rule (fan_out costs 6 more
+    effects + delays resolution). Result: genuine 135 escalate / 79 fan_out
+    split, 0 fallbacks; wal 0.0000 duplicates / 1.0000 exactly-once, baseline
+    0.80 duplicates, deterministic 0.0000 — $0.0117. This is the primary
+    reported supervisor result: the protocol holds under a genuine mixed
+    route distribution, not just a uniform one.
 
 ## Deliverables
 

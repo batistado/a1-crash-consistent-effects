@@ -316,8 +316,12 @@ def supervisor_node(state):
         # reconciliation) has already run before this node.
         import llm_planner
         settled = set(_read_branch_state(state["run_dir"])["branches"])
+        # Seeded per-episode evidence profile (identical in fresh/recover:
+        # derived from plan_seed). Without varying evidence the prompt is
+        # degenerate and the model can only ever fan out.
+        evidence = llm_planner.evidence_summary(state["plan_seed"])
         route, meta = llm_planner.decide_route(
-            1, settled, state["mode"], state["run_dir"])
+            1, settled, state["mode"], state["run_dir"], evidence)
         scenario = _persist_llm_decision(state, route, meta)
         # The BRANCH marker is the post-branch-decision crash window:
         # decision durable in the watchdog's sight, tool not yet invoked.

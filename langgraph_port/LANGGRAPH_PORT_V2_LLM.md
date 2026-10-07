@@ -156,14 +156,43 @@ planner adds no per-claim cost.
    a 1-episode smoke test: 0 model calls, spend $0.0000). Same bug class as
    v2's #3 — LangGraph drops undeclared state keys without warning.
 
+## Mixed-distribution follow-up (temperature 1.0, 2026-10-07)
+
+The run above left one limitation: the model chose `fan_out` in all 180
+episodes, so the protocol was validated under a uniform route distribution
+only. A temperature-1.0 rerun was authorized to test it under a genuine mix —
+but the first attempt (killed at 30/60) showed every decision still `fan_out`,
+and the root cause was the prompt, not the temperature: it showed the model
+identical evidence every episode (3 branches, 1 finding each, branch IDs
+only), so `fan_out` was the only rational answer and sampling noise could
+never create a real mix.
+
+Fix (`llm_planner.py`): (1) seeded per-episode evidence profiles via
+`evidence_summary(plan_seed)` — unanimous corroboration vs divergent findings
+vs 2-of-3 split, deterministic in `plan_seed` with a domain-separated RNG so
+the fresh and recover generations judge identical evidence; the model still
+never sees the claim log. (2) A cost-aware decision rule: `fan_out` costs 6
+more non-idempotent effects and delays incident resolution, `escalate`
+concludes now — without costs there is no decision, only a default.
+Validated before relaunching: at temperature 0 the model's argmax cleanly
+separates (strong evidence → escalate 3/3, weak → fan_out 3/3).
+
+Full campaign (180 episodes, 60/condition, same seed 20261011, temp 1.0):
+**135 escalate / 79 fan_out across 214 round-1 decisions, 0 fallbacks** — a
+genuine model-driven mixed distribution. Results: wal 0.0000 duplicates /
+1.0000 exactly-once (60/60), baseline 0.8000 / 0.2000, deterministic keys
+0.0000 / 1.0000, zero missing effects. Spend $0.0117. This is the primary
+reported supervisor result.
+
 ## Verdict
 
 The protocol is planner-agnostic in practice, not just in theory: with a
-real gpt-4o-mini supervisor making 214 routing judgments (never seeing the
-claim log, always deciding from reconciled state), wal holds 0.0000
-duplicates / 1.0000 exactly-once over 60 crash-injected episodes, baseline
-reproduces its 0.80 duplicate rate, and deterministic keys hold at 0.0000 —
-headline-identical to the scripted run. Total API spend $0.0069. This was
-the last planned A1 experiment; the empirical package is complete:
-sandbox (1,500 eps/condition), LLM validation (2 models × 70), component
-ablations, LangGraph v1, v2 scripted, v2 real-LLM supervisor.
+real gpt-4o-mini supervisor making routing judgments from reconciled state
+(never seeing the claim log), wal holds 0.0000 duplicates / 1.0000
+exactly-once, baseline reproduces its 0.80 duplicate rate, and deterministic
+keys hold at 0.0000 — headline-identical to the scripted run, under both a
+uniform route distribution (temp-0: 180/180 fan_out, $0.0069) and a genuine
+mixed one (temp-1.0: 135 escalate / 79 fan_out, $0.0117). The empirical
+package is complete: sandbox (1,500 eps/condition), LLM validation (2 models
+× 70), component ablations, LangGraph v1, v2 scripted, v2 real-LLM supervisor
+(uniform + mixed).

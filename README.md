@@ -52,11 +52,11 @@ Tracked here explicitly; audited 2026-10-07 against the actual files.
 | 4 | Component ablations (every piece load-bearing) | ✅ |
 | 5 | Two-model LLM validation (single-vendor caveat → one honest limitations sentence) | ✅ |
 | 6 | Production-shaped graph, real crashes (LangGraph v1 + v2) | ✅ |
-| 7 | Real-LLM supervisor run | ⏳ in progress |
-| 8 | IEEEtran manuscript | ⬜ not started — **critical path** |
-| 9 | DESIGN_V2.md wording ("scripted planner" → LLM planner, once run 7 lands) | ⬜ |
+| 7 | Real-LLM supervisor run (uniform + mixed: 135 escalate / 79 fan_out, 0 fallbacks) | ✅ |
+| 8 | IEEEtran manuscript | ⬜ not started — **critical path** (parked per Mohammed 2026-10-07, B1 first) |
+| 9 | DESIGN_V2.md wording ("scripted planner" → LLM planner, once run 7 lands) | ✅ |
 | 10 | Humanize v2 + LLM reports | ⬜ |
-| 11 | Final GitHub push of complete state | ⬜ |
-| 12 | Pre-submission overlap re-check | ⬜ |
+| 11 | Final GitHub push of complete state | ✅ 2026-10-07 |
+| 12 | Pre-submission overlap re-check | ⏳ running 2026-10-07 |
 
 Verdict: evidence base complete; nothing submittable until items 7–8 land. See `RUNLOG.md` for the append-only experiment history.

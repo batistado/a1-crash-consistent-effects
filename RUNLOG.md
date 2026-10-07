@@ -290,3 +290,16 @@ spend, verdict. Newest at the bottom. Times in PDT unless noted.
 - Outputs: results_langgraph_v2_llm_mixed.json(.jsonl); log
   logs/crash_v2_llm_mixed.log (detached, stderr captured).
 - Verdict: RUNNING.
+
+## 2026-10-07 — A1 LLM prompt fix (root-caused, validated, relaunched)
+- Diagnosis: the temp=1.0 mixed run was killed at 30/60 (wal) — every decision still fan_out. Root cause was NOT temperature: the prompt showed the model IDENTICAL evidence every episode (3 branches, 1 finding each, branch IDs only) with "escalate only if evidence appears sufficient." With nothing varying, fan_out is the only rational answer; sampling noise can't create a genuine mix.
+- Fix (llm_planner.py): (1) seeded per-episode evidence profiles via evidence_summary(plan_seed) — unanimous corroboration / divergent findings / 2-of-3 split, deterministic in plan_seed with domain-separated RNG so fresh and recover generations judge identical evidence; model still never sees the claim log. (2) Added the missing cost dimension to the decision rule: fan_out costs 6 more non-idempotent effects + delays resolution; escalate concludes now. Without costs there is no decision, only a default — this makes it a genuine supervisory judgment, not a manufactured split.
+- Validation (6 API calls, ~$0.001): temp=0 argmax now cleanly separates — strong evidence → escalate (3/3), weak evidence → fan_out (3/3). First attempt (evidence only, old decision rule) still returned fan_out 4/4 — the cost dimension was the load-bearing change.
+- Relaunched: full 180-episode mixed campaign (60/condition × wal/baseline/deterministic), LLM_PLANNER_TEMP=1.0, seed 20261011, --overwrite (old-prompt partial results discarded as invalid for the mix question). Spend guard $4.50, campaign cap $5.
+
+## 2026-10-07 — A1 mixed-route campaign COMPLETE (fixed prompt, temp=1.0)
+- **Config:** 180 episodes (60/condition × wal/baseline/deterministic), gpt-4o-mini supervisor, LLM_PLANNER_TEMP=1.0, seed 20261011, run-tag v2_llm_mixed. Fixed prompt: seeded per-episode evidence profiles + cost-aware decision rule.
+- **Route mix (the point of the rerun):** 135 escalate / 79 fan_out across 214 round-1 decisions, 0 fallbacks — a genuine model-driven mixed distribution (was 180/0 fan_out under the old prompt).
+- **Results:** wal dup 0.000 / exactly-once 1.000 (60/60); baseline dup 0.800 / eo 0.200; deterministic dup 0.000 / eo 1.000. Zero missing effects.
+- **Spend:** $0.0117, 214 LLM calls (cap $5).
+- **Verdict:** PASS. The protocol holds exactly-once under a genuine mixed supervisor route distribution, not just a uniform one. This closes the uniform-distribution limitation from the temp-0 run. Next: update DESIGN_V2.md + real-LLM report, push to GitHub, draft manuscript.

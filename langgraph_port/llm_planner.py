@@ -10,6 +10,13 @@ gpt-4o-mini judgment call. Approved design constraints (2026-10-07):
   deterministic reconciliation (recover_node) has already run.
 - temperature=0 for reproducibility; 3 retries with backoff; deterministic
   fallback ("fan_out") on persistent failure, logged as fallback.
+- Per-episode EVIDENCE (2026-10-07 fix): the original prompt showed the model
+  identical evidence every episode (3 branches, 1 finding each), so fan_out
+  was the only rational answer and temperature could not fix it. Now the
+  prompt carries a seeded per-episode evidence profile (unanimous
+  corroboration vs divergent findings vs 2-of-3 split) via evidence_summary(),
+  deterministic in plan_seed so fresh and recover generations judge identical
+  evidence. The model still decides; we report the resulting distribution.
 - Spend guard: cumulative usage tracked per run dir in llm_spend.json;
   the call aborts above $4.50 (campaign hard stop is $5; expected ~$0.02).
 
@@ -21,6 +28,7 @@ only genuine routing decision in this scenario is round 1's.
 """
 import json
 import os
+import random
 import sys
 import time
 import urllib.request
@@ -48,17 +56,72 @@ PROMPT = (
     "You are the supervisor of a two-round evidence-gathering agent.\n\n"
     "Situation:\n"
     "- Round 0 is complete: the agent fanned out over 3 source branches; each "
-    "branch recorded one finding (a non-idempotent HTTP effect) and logged its "
+    "branch recorded its finding (a non-idempotent HTTP effect) and logged its "
     "source (a non-idempotent file append). Settled branches: {branches}.\n"
+    "- Round-0 findings:\n{evidence}\n"
     "{recovery_note}"
     "- Now you must route round 1. Two options:\n"
     '  - "fan_out": dispatch 3 more source branches for deeper evidence '
     "(6 more non-idempotent effects).\n"
     '  - "escalate": send a single alert effect and conclude the investigation.\n\n'
     "Decide: reply with exactly one word, either fan_out or escalate.\n"
-    "Escalate only if the evidence gathered so far appears sufficient to "
-    "conclude; otherwise fan out for deeper coverage."
+    "Weigh two things: (1) whether the round-0 evidence is sufficient to "
+    "conclude and act now; (2) the cost of another round -- fan_out fires 6 "
+    "more non-idempotent effects and delays incident resolution, while "
+    "escalate concludes the investigation immediately. Escalate when the "
+    "evidence is sufficient to act on; fan out only when the evidence leaves "
+    "genuine uncertainty that deeper coverage could resolve."
 )
+
+
+def evidence_summary(plan_seed):
+    """Seeded per-episode round-0 evidence profile for the supervisor prompt.
+
+    Deterministic in plan_seed with a domain-separated RNG stream, so the
+    fresh and recover generations of an episode see IDENTICAL evidence (the
+    crash must not change what the supervisor judges). Gives the model a
+    genuine, episode-varying judgment: unanimous corroboration argues for
+    escalate, divergent findings for fan_out, 2-of-3 as the judgment call.
+    The model sees only investigative findings -- never the claim log.
+    """
+    rng = random.Random(plan_seed ^ 0xE41D)
+    causes = ["expired TLS certificate on api-gw-3",
+              "connection-pool exhaustion on db-primary",
+              "DNS misconfiguration for cdn-edge-7"]
+    profile = rng.random()
+    if profile < 0.35:
+        # Strong: all three branches corroborate one root cause.
+        cause = rng.choice(causes)
+        lines = [
+            f"  - branch {b}: {cause} "
+            f"(corroborated by {', '.join('branch ' + str(x) for x in range(3) if x != b)})"
+            for b in range(3)]
+        assessment = ("Assessment: all 3 branches corroborate a single root "
+                      "cause with matching details.")
+    elif profile < 0.70:
+        # Weak: divergent findings, no consensus.
+        picked = rng.sample(causes, 3)
+        lines = [f"  - branch {b}: {picked[b]}" for b in range(3)]
+        assessment = ("Assessment: the 3 branches report divergent findings "
+                      "with no consensus on the root cause.")
+    else:
+        # Mixed: 2 of 3 corroborate; the third diverges.
+        cause = rng.choice(causes)
+        other = rng.choice([c for c in causes if c != cause])
+        holdout = rng.randrange(3)
+        agreers = [x for x in range(3) if x != holdout]
+        lines = []
+        for b in range(3):
+            if b == holdout:
+                lines.append(f"  - branch {b}: {other} (diverges)")
+            else:
+                lines.append(
+                    f"  - branch {b}: {cause} "
+                    f"(corroborated by branch {agreers[1] if agreers[0] == b else agreers[0]})")
+        assessment = (
+            f"Assessment: branches {agreers[0]} and {agreers[1]} corroborate "
+            f"one root cause; branch {holdout} diverges.")
+    return "\n".join(lines) + "\n" + assessment
 
 
 def _spend_path(run_dir):
@@ -112,10 +175,12 @@ def _parse_route(text):
     return None
 
 
-def decide_route(round_no, settled_branches, mode, run_dir):
+def decide_route(round_no, settled_branches, mode, run_dir, evidence):
     """Ask the LLM for round 1's route. Returns (route, meta dict).
 
     settled_branches: reconciled branch-state keys (never the claim log).
+    evidence: per-episode round-0 evidence summary from evidence_summary()
+        (seeded by plan_seed; identical in fresh and recover generations).
     """
     recovery_note = ""
     if mode == "recover":
@@ -125,6 +190,7 @@ def decide_route(round_no, settled_branches, mode, run_dir):
             "claim-log reconciliation. Route the remaining work.\n")
     prompt = PROMPT.format(
         branches=", ".join(sorted(settled_branches)) or "(none)",
+        evidence=evidence,
         recovery_note=recovery_note)
 
     last_err = None
