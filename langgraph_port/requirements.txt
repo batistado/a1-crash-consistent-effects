@@ -1,0 +1,10 @@
+# A1 LangGraph production port — pinned dependencies.
+# Recreate with: python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+# Tested on Python 3.12.
+langgraph==1.2.14
+langchain-core==1.6.7
+langgraph-checkpoint==4.2.0
+langgraph-prebuilt==1.1.0
+langgraph-sdk==0.4.6
+langsmith==0.14.4
+requests==2.34.2

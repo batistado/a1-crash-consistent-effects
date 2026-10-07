@@ -1,0 +1,1 @@
+{"conditions":["wal","baseline","deterministic"],"episodes_per_condition":60,"fresh_timeout_s":120,"marker_sleep_ms":30,"p_in_window":0.75,"p_plan_shift":0.3,"p_post_checkpoint":0.15,"p_reword":0.5,"recover_timeout_s":180,"seed":20261010,"server_host":"127.0.0.1","server_port":8765,"watchdog_poll_ms":2}

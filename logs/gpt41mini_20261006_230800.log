@@ -1,0 +1,89 @@
+[1/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.000 (6s)
+[2/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.001 (4s)
+[3/70] landing=post_checkpoint dup=0 miss=0 reword=0 shift=False spend=$0.001 (5s)
+[4/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.002 (4s)
+[5/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.003 (5s)
+[6/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.003 (5s)
+[7/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.004 (3s)
+[8/70] landing=pre_step dup=0 miss=0 reword=0 shift=False spend=$0.005 (6s)
+[9/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.005 (5s)
+[10/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.006 (6s)
+[11/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.007 (3s)
+[12/70] landing=pre_step dup=0 miss=0 reword=0 shift=False spend=$0.007 (4s)
+[13/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.008 (4s)
+[14/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.008 (4s)
+[15/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.009 (3s)
+[16/70] landing=post_checkpoint dup=0 miss=0 reword=0 shift=False spend=$0.010 (5s)
+[17/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.010 (4s)
+[18/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.011 (4s)
+[19/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.012 (5s)
+[20/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.012 (3s)
+[21/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.013 (6s)
+[22/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.014 (5s)
+[23/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.014 (5s)
+[24/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.015 (4s)
+[25/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.015 (3s)
+[26/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.016 (6s)
+[27/70] landing=pre_step dup=0 miss=0 reword=0 shift=False spend=$0.017 (4s)
+[28/70] landing=pre_step dup=0 miss=0 reword=0 shift=False spend=$0.018 (5s)
+[29/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.018 (3s)
+[30/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.019 (3s)
+[31/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.020 (5s)
+[32/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.021 (5s)
+[33/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.021 (5s)
+[34/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.022 (6s)
+[35/70] landing=pre_step dup=0 miss=0 reword=0 shift=False spend=$0.023 (6s)
+[36/70] landing=post_checkpoint dup=0 miss=0 reword=0 shift=False spend=$0.024 (3s)
+[37/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.025 (5s)
+[38/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.025 (3s)
+[39/70] landing=post_checkpoint dup=0 miss=0 reword=0 shift=False spend=$0.026 (4s)
+[40/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.026 (3s)
+[41/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.027 (3s)
+[42/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.027 (4s)
+[43/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.028 (5s)
+[44/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.029 (6s)
+[45/70] landing=post_checkpoint dup=0 miss=0 reword=0 shift=False spend=$0.030 (3s)
+[46/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.030 (3s)
+[47/70] landing=pre_step dup=0 miss=0 reword=0 shift=False spend=$0.031 (5s)
+[48/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.031 (4s)
+[49/70] landing=post_checkpoint dup=0 miss=0 reword=0 shift=False spend=$0.032 (4s)
+[50/70] landing=pre_step dup=0 miss=0 reword=0 shift=False spend=$0.032 (3s)
+[51/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.033 (5s)
+[52/70] landing=post_checkpoint dup=0 miss=0 reword=0 shift=False spend=$0.034 (4s)
+[53/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.035 (5s)
+[54/70] landing=post_checkpoint dup=0 miss=0 reword=0 shift=False spend=$0.035 (4s)
+[55/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.036 (4s)
+[56/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.037 (4s)
+[57/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.037 (4s)
+[58/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.038 (6s)
+[59/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.039 (4s)
+[60/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.040 (6s)
+[61/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.040 (4s)
+[62/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.041 (7s)
+[63/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.042 (3s)
+[64/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.043 (4s)
+[65/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.043 (4s)
+[66/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.044 (3s)
+[67/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.044 (4s)
+[68/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.045 (4s)
+[69/70] landing=in_window dup=0 miss=0 reword=0 shift=False spend=$0.046 (5s)
+[70/70] landing=post_checkpoint dup=0 miss=0 reword=0 shift=False spend=$0.046 (4s)
+wrote /home/hatch/workspace/orx-projects/a1-crash-consistent-effects/llm_validation_results_gpt41mini.json
+{
+  "claim_adherence_step_rate": 1.0,
+  "claim_adherence_episode_rate": 1.0,
+  "episodes_with_crash": 70,
+  "reemission_rate": 0.0,
+  "reword_rate": 0.0,
+  "plan_shift_rate": 0.0,
+  "order_deviation_rate": 0.0,
+  "duplicate_effect_rate": 0.0,
+  "exactly_once_rate": 1.0,
+  "mean_missing_per_episode": 0.0
+}
+{
+  "llm_calls": 278,
+  "prompt_tokens": 73757,
+  "completion_tokens": 10598,
+  "estimated_usd": 0.0465
+}
