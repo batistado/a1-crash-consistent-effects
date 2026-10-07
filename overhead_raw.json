@@ -1,0 +1,45 @@
+{
+  "env": {
+    "episodes": 200,
+    "steps_per_episode": 4,
+    "total_steps": 800
+  },
+  "durable_ms_per_op": {
+    "claim": {
+      "mean": 19.0961,
+      "p50": 17.3448,
+      "p99": 42.7964
+    },
+    "commit": {
+      "mean": 19.3215,
+      "p50": 17.2324,
+      "p99": 53.1318
+    },
+    "checkpoint": {
+      "mean": 13.318,
+      "p50": 11.8976,
+      "p99": 38.7539
+    }
+  },
+  "durable_ms_per_step_total": {
+    "mean": 51.7356,
+    "p50": 51.7781,
+    "p99": 103.5463
+  },
+  "inmemory_ms_per_step": {
+    "mean": 0.00169,
+    "p99": 0.01098
+  },
+  "bytes_per_op": {
+    "claim": {
+      "mean": 180
+    },
+    "commit": {
+      "mean": 179
+    },
+    "checkpoint": {
+      "mean": 17
+    }
+  },
+  "bytes_per_step_total": 376
+}

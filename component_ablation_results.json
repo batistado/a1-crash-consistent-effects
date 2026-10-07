@@ -1,0 +1,76 @@
+{
+  "seed": 20261009,
+  "episodes_per_condition": 1500,
+  "p_in_window": 0.75,
+  "p_post_checkpoint": 0.15,
+  "p_reword_args": 0.5,
+  "p_plan_shift": 0.3,
+  "p_zombie": 0.5,
+  "conditions": {
+    "full": {
+      "episodes": 1500,
+      "duplicate_effect_rate": 0.0,
+      "exactly_once_rate": 1.0,
+      "mean_duplicates_per_episode": 0.0,
+      "mean_missing_per_episode": 0.0,
+      "episodes_with_duplicates": 0,
+      "zombie_probes_fenced": 749,
+      "zombie_probes_committed": 0,
+      "tool_fenced_rejections": 749,
+      "crash_landings": {
+        "in_window": 1111,
+        "pre_step": 164,
+        "post_checkpoint": 225
+      }
+    },
+    "no_fencing": {
+      "episodes": 1500,
+      "duplicate_effect_rate": 0.4927,
+      "exactly_once_rate": 0.5073,
+      "mean_duplicates_per_episode": 0.4927,
+      "mean_missing_per_episode": 0.0,
+      "episodes_with_duplicates": 739,
+      "zombie_probes_fenced": 0,
+      "zombie_probes_committed": 739,
+      "tool_fenced_rejections": 0,
+      "crash_landings": {
+        "in_window": 1107,
+        "post_checkpoint": 247,
+        "pre_step": 146
+      }
+    },
+    "no_log": {
+      "episodes": 1500,
+      "duplicate_effect_rate": 0.2333,
+      "exactly_once_rate": 0.7667,
+      "mean_duplicates_per_episode": 0.2333,
+      "mean_missing_per_episode": 0.0,
+      "episodes_with_duplicates": 350,
+      "zombie_probes_fenced": 746,
+      "zombie_probes_committed": 0,
+      "tool_fenced_rejections": 746,
+      "crash_landings": {
+        "in_window": 1157,
+        "post_checkpoint": 212,
+        "pre_step": 131
+      }
+    },
+    "neither": {
+      "episodes": 1500,
+      "duplicate_effect_rate": 0.8767,
+      "exactly_once_rate": 0.1233,
+      "mean_duplicates_per_episode": 1.2547,
+      "mean_missing_per_episode": 0.0,
+      "episodes_with_duplicates": 1315,
+      "zombie_probes_fenced": 0,
+      "zombie_probes_committed": 753,
+      "tool_fenced_rejections": 0,
+      "crash_landings": {
+        "in_window": 1129,
+        "post_checkpoint": 223,
+        "pre_step": 148
+      }
+    }
+  },
+  "elapsed_seconds": 1.2
+}
