@@ -178,3 +178,73 @@ spend, verdict. Newest at the bottom. Times in PDT unless noted.
 - Spend: $0 so far (v2 not yet complete).
 - Deliverables when v2 lands: DESIGN_V2.md, LANGGRAPH_PORT_V2.md, RUNLOG
   entry with tables; existing linear-loop port kept intact.
+
+## 2026-10-07 — LangGraph port v2 ("research-assistant") COMPLETE
+- Built in `langgraph_port/`: `common_v2.py` (scenario), `agent_graph_v2.py`
+  (StateGraph: supervisor w/ conditional_edges routing, Send fan-out to a
+  compiled worker subgraph x3, reducer fan-in, retry w/ real 1s backoff,
+  escalate chain), `agent_run_v2.py`, `crash_harness_v2.py`
+  (predicate watchdog, real SIGKILL), `config_v2.json` (seed 20261011,
+  tool server :8766). v1 linear-loop port untouched. Docs: `DESIGN_V2.md`,
+  `LANGGRAPH_PORT_V2.md`; README gained a v2 section; requirements.txt
+  unchanged (no new deps).
+- Bugs fixed en route: (1) branch marked done on partial commit -> now
+  requires ALL effects' claims committed; (2) read-modify-write race on
+  branch-state under Send fan-out -> one atomic file per settled branch;
+  (3) LangGraph drops node outputs with keys undeclared in the TypedDict
+  -> escalate keys declared (first full run had 24 wal recovery-proc
+  failures from this; discarded, re-ran clean).
+- Results, 180 episodes (60/cond), real SIGKILL, 0 missed crashes,
+  0 recovery failures, zombie fencing 60/60 both tool paths every cond:
+  wal dup 0.0000 / exactly-once 1.0000; baseline dup 0.8000 (48/60) /
+  exactly-once 0.2000; deterministic dup 0.0000 / exactly-once 1.0000.
+  Crash breakdown: mid_fanout baseline 30/30 dup (100% genuine partial
+  fan-out at kill), retry_backoff baseline 18/18 dup, post_branch 0 dup
+  everywhere (liveness check, 0 missing). Deterministic holds in v2
+  because branch identities are structural/stable — sharpens the v1
+  finding: keys fail exactly when recovery re-derives identities.
+- Overhead (wal, n=798 fsync'd claim records): p50 20.3ms, p99 63.4ms —
+  same ~1% tax vs LLM tool calls; fan-out multiplies claim count, not
+  per-claim cost.
+- Spend: $0 (local compute, scripted planner).
+- Verdict: PASS. Protocol composes with branching, parallel fan-out,
+  delegation, retry — the "toy loop" objection is answered. Empirical
+  package now covers linear (v1), branching + parallel (v2) shapes.
+- NOTE (parent-approved follow-up, NOT done here): real LLM planner
+  (gpt-4o-mini) for the v2 supervisor's routing decisions, model never
+  reads the raw claim log. Awaits parent dispatch.
+
+## 2026-10-07 ~01:29 PDT — Real-LLM-planner v2 run DISPATCHED (user approved)
+- Mohammed's approval (voice): kick off the real-LLM supervisor variant;
+  he framed it as the last planned experiment before manuscript writing.
+- Config: same v2 "research assistant" graph, gpt-4o-mini drives supervisor
+  routing; LLM never sees the raw claim log (deterministic reconciliation
+  first). wal arm is the must-have; 60 episodes; same crash points.
+- Also: update stale DESIGN_V2.md ("scripted planner" prose).
+- Hard stop: $5 OpenAI (within the $10 cap).
+- Expected deliverables: LANGGRAPH_PORT_V2_LLM.md + RUNLOG entry.
+
+## 2026-10-07 ~01:45 PDT — Final Q1-readiness audit (TPDS) — subagent audit, $0 API
+- What checked: (1) 5-point research quality gate vs standing bar; (2)
+  submission-readiness: LLM-run artifacts, stale prose, humanization
+  coverage, GitHub state, manuscript, formal model — all verified against
+  files on disk, not memory.
+- Gate: 1) TPDS Q1 target PASS (verified Q1, native fit); 2) no published
+  overlap PASS conditional on pre-submission re-check (3 passes 2026-10-07;
+  LIMBO/2608.00501/ACRFence identified as must-cite neighbors, not scoops);
+  3) genuine novelty PASS; 4) evaluation sufficient PASS (results.json
+  1500eps/cond, 2-model LLM validation, LangGraph v1+v2 real SIGKILL, all
+  reproducible from src/); 5) EB-1A-caliber impact PASS.
+- Readiness: LLM-run report LANGGRAPH_PORT_V2_LLM.md MISSING (no LLM-run
+  logs on disk — run status unconfirmed); DESIGN_V2.md "scripted planner"
+  prose accurate for completed v2, update pending LLM run; humanization
+  gap: langgraph_port/LANGGRAPH_PORT_V2.md was skipped (did not exist
+  during pass) — needs humanizing; GitHub: local has 16 modified + 2
+  untracked paths uncommitted since 7f3cd00, no remote configured locally,
+  remote missing v2 results JSONs/runs/ledgers (size limits); manuscript:
+  NO IEEEtran draft exists (formal core + 8 empirical reports exist as
+  raw material); FORMAL_MODEL.md exists, consistent with v2 (predates the
+  deterministic-keys boundary refinement — note for manuscript).
+- Spend: $0. Verdict: NOT submittable today. After LLM run + manuscript,
+  remaining: humanize v2/LLM reports, commit+push final state, update
+  DESIGN_V2.md, pre-submission overlap re-check. Evidence base complete.

@@ -28,9 +28,35 @@ Run: `bash run.sh` → `results.json`.
 
 **Expected result.** Baseline duplicates at roughly the in-window crash rate; content-hash keys still duplicate on reworded retries; deterministic keys still duplicate on shifted plans; the write-ahead log reconciles from the log with original keys and reaches ~100% exactly-once. The paper's headline: keys alone are fragile to how the retry re-derives the key; the log makes recovery independent of the agent's re-derivation.
 
-## Status
+## Status (2026-10-07)
 
 - [x] Scaffold written (sandbox, run.sh, DESIGN.md)
 - [x] ORX project registered
-- [ ] Baseline run, 1500 episodes/condition (`results.json`)
-- [ ] LLM-in-the-loop validation (STUB — needs separate spend approval; see DESIGN.md)
+- [x] Baseline run, 1500 episodes/condition (`results.json`) — baseline dup 0.769, deterministic keys 0.211, WAL **0.000**
+- [x] LLM-in-the-loop validation: gpt-4o-mini 70 eps (0 dups, 94.29% exactly-once), gpt-4.1-mini 70/70
+- [x] Component ablations (fencing-off → 0.4927 dups; claim-log-off regresses), tight-prompt ablation, overhead (~52 ms/step)
+- [x] LangGraph v1 production port — real StateGraph, real SIGKILL, 180 eps (`langgraph_port/LANGGRAPH_PORT.md`)
+- [x] LangGraph v2 richer graph — branching, parallel fan-out/fan-in, retries; 60 eps/condition, WAL 0.000 dups / 1.000 exactly-once, baseline 0.80 dups (`langgraph_port/LANGGRAPH_PORT_V2.md`)
+- [ ] Real-LLM supervisor v2 run (gpt-4o-mini planner, claim log kept from model; $5 cap) — in progress
+- [ ] IEEEtran TPDS manuscript
+
+## IEEE TPDS readiness checklist
+
+Tracked here explicitly; audited 2026-10-07 against the actual files.
+
+| # | Item | Status |
+|---|---|---|
+| 1 | Research quality gate (Q1 venue, genuine novelty, no published overlap, feasible eval, EB-1A caliber) | ✅ PASS |
+| 2 | Novelty re-verification (3 independent checks; LIMBO/ACRFence/AgentRewind as must-cites) | ✅ PASS |
+| 3 | Core evidence: 1,500 eps/condition, write-ahead log at 0 duplicates | ✅ |
+| 4 | Component ablations (every piece load-bearing) | ✅ |
+| 5 | Two-model LLM validation (single-vendor caveat → one honest limitations sentence) | ✅ |
+| 6 | Production-shaped graph, real crashes (LangGraph v1 + v2) | ✅ |
+| 7 | Real-LLM supervisor run | ⏳ in progress |
+| 8 | IEEEtran manuscript | ⬜ not started — **critical path** |
+| 9 | DESIGN_V2.md wording ("scripted planner" → LLM planner, once run 7 lands) | ⬜ |
+| 10 | Humanize v2 + LLM reports | ⬜ |
+| 11 | Final GitHub push of complete state | ⬜ |
+| 12 | Pre-submission overlap re-check | ⬜ |
+
+Verdict: evidence base complete; nothing submittable until items 7–8 land. See `RUNLOG.md` for the append-only experiment history.
