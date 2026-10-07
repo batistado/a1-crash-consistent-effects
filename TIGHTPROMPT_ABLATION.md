@@ -1,19 +1,13 @@
-# A1 Recovery-Prompt Ablation — tighter prompt kills the re-emission loops
+# A1 Recovery-Prompt Ablation — a tighter prompt ends the re-emission loops
 
-**Date:** 2026-10-07 · **Script:** `src/llm_validation_tightprompt.py`
-(diff vs `llm_validation.py`: `ask_claim_recovery` only)
-**Config:** 70 episodes, seed 20261008 (same crash schedule as baseline),
-gpt-4o-mini, temp 0.7, productive<12 / attempts<48 — everything else identical.
+**Date:** 2026-10-07 · **Script:** `src/llm_validation_tightprompt.py` (diff vs `llm_validation.py`: `ask_claim_recovery` only)
+**Config:** 70 episodes, seed 20261008 (same crash schedule as baseline), gpt-4o-mini, temp 0.7, productive<12 / attempts<48 — everything else identical.
 
 ## What changed
 
-Baseline prompt: open-ended — "re-emit a claim for any step you believe was
-lost, or emit the claim for the next step" (measured *natural* recovery
-behavior).
+Baseline prompt: open-ended — "re-emit a claim for any step you believe was lost, or emit the claim for the next step" (measured *natural* recovery behavior).
 
-Ablation prompt: hands the model the explicit list of remaining
-(claimed-but-uncommitted / un-checkpointed) steps and instructs it to emit
-the claim for the NEXT remaining step, not re-emit committed ones.
+Ablation prompt: hands the model the explicit list of remaining (claimed-but-uncommitted / un-checkpointed) steps and instructs it to emit the claim for the NEXT remaining step, not re-emit committed ones.
 
 ## Results
 
@@ -33,22 +27,10 @@ the claim for the NEXT remaining step, not re-emit committed ones.
 
 ## Verdict
 
-**The residual misses are prompt-fixable.** Making the remaining work
-explicit collapses re-emission behavior (196 → 18 total re-emissions) and
-eliminates misses entirely (5 → 0), while *also* costing less ($0.0188 vs
-$0.0298 — no more 47-call loops burning budget). One episode still opened
-with 18 re-emissions but then advanced and completed — the explicit
-remaining-list breaks the loop rather than the model never starting one.
+**The residual misses are prompt-fixable.** Making the remaining work explicit collapses re-emission behavior (196 → 18 total re-emissions) and eliminates misses entirely (5 → 0), while also costing less ($0.0188 vs $0.0298 — no more 47-call loops burning budget). One episode still opened with 18 re-emissions but then advanced and completed — the explicit remaining-list breaks the loop rather than the model never starting one.
 
 ## Paper framing
 
-- **Safety is prompt-independent:** 0 duplicates under both prompts. The
-  WAL guarantee does not depend on model cooperation.
-- **Liveness/completeness is prompt-sensitive:** an open-ended recovery
-  prompt lets the model loop on committed work; stating the remaining work
-  explicitly restores full completeness. This converts the baseline's
-  limitation into a positive harness-design result: *recovery prompts
-  should enumerate remaining claims*.
-- Honest caveat: same seed fixes the crash schedule, but model sampling
-  (temp 0.7) varies run to run — some of the gap is noise. The effect size
-  (5→0 misses, 196→18 re-emissions) is structural, not noise-level.
+- **Safety is prompt-independent:** 0 duplicates under both prompts. The WAL guarantee does not depend on model cooperation.
+- **Liveness/completeness is prompt-sensitive:** an open-ended recovery prompt lets the model loop on committed work; stating the remaining work explicitly restores full completeness. This turns the baseline's limitation into a harness-design finding: recovery prompts should enumerate remaining claims.
+- Honest caveat: same seed fixes the crash schedule, but model sampling (temp 0.7) varies run to run — some of the gap is noise. The effect size (5→0 misses, 196→18 re-emissions) is structural, not noise-level.
