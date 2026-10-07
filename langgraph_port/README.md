@@ -1,12 +1,8 @@
 # A1 LangGraph Production Port
 
-Crash-consistent checkpointing for exactly-once agent effects, running on a
-**real LangGraph `StateGraph`** with **real tool side effects**, a **real
-fsync'd write-ahead claim log**, **real `SIGKILL` crash injection**, and
-**real epoch fencing** — no mocks in the crash path.
+Crash-consistent checkpointing for exactly-once agent effects, running on a **real LangGraph `StateGraph`** with **real tool side effects**, a **real fsync'd write-ahead claim log**, **real `SIGKILL` crash injection**, and **real epoch fencing** — no mocks in the crash path.
 
-This is the production-faithfulness companion to the scripted sandbox
-(`../src/sandbox.py`) for the A1 TPDS paper push.
+This is the production-faithfulness companion to the scripted sandbox (`../src/sandbox.py`) for the A1 TPDS paper push.
 
 ## Architecture
 
@@ -23,11 +19,7 @@ crash_harness.py  (episode driver: crash schedule, watchdog, scoring)
                         with ORIGINAL keys + advance checkpoint (log-fenced)
 ```
 
-**Durable state** (the only thing that survives the `SIGKILL`):
-`runs/<cond>/<workflow-id>/claim.log` (fsync'd JSONL),
-`checkpoint.json` (atomic), `epoch.json`, `plan.json`,
-`scratch/audit.log` (file-tool ledger); the tool server's `ledger.jsonl`
-+ `epochs.json` in its own process/directory.
+**Durable state** (the only thing that survives the `SIGKILL`): `runs/<cond>/<workflow-id>/claim.log` (fsync'd JSONL), `checkpoint.json` (atomic), `epoch.json`, `plan.json`, `scratch/audit.log` (file-tool ledger); the tool server's `ledger.jsonl` + `epochs.json` in its own process/directory.
 
 ## Setup
 
@@ -52,32 +44,18 @@ python3 -m venv .venv
 # crash schedule lives in config.json (seeded RNG; edit episodes/conditions there)
 ```
 
-`crash_harness.py` starts the tool server itself (default
-`127.0.0.1:8765`), runs every episode, then writes `results_langgraph.json`.
-`crash_harness_v2.py` is the same shape for the v2 scenario (tool server on
-`127.0.0.1:8766`, schedule in `config_v2.json`, results in
-`results_langgraph_v2.json`).
+`crash_harness.py` starts the tool server itself (default `127.0.0.1:8765`), runs every episode, then writes `results_langgraph.json`. `crash_harness_v2.py` is the same shape for the v2 scenario (tool server on `127.0.0.1:8766`, schedule in `config_v2.json`, results in `results_langgraph_v2.json`).
 
 ## v2 — "research-assistant" scenario
 
-`DESIGN_V2.md` has the full rationale. In short: v1's loop is linear, and
-reviewers will ask whether the protocol survives a production-shaped agent.
-v2 models one in the same directory without touching v1:
+`DESIGN_V2.md` has the full rationale. In short: v1's loop is linear, and reviewers will ask whether the protocol survives a production-shaped agent. v2 models one in the same directory without touching v1:
 
-- **Supervisor** with `add_conditional_edges` routing (fan_out / escalate /
-  done) — real branching.
-- **`Send`-based fan-out** to a **compiled worker subgraph** (3 parallel
-  branches, fan-in via reducer) — real delegation.
-- **Retry loop with a real backoff sleep** on scripted transient tool
-  failure — real retry behavior.
-- **New crash windows**: mid-fan-out (partial completion — some workers
-  committed, others not), post-branch-decision, during retry backoff.
+- **Supervisor** with `add_conditional_edges` routing (fan_out / escalate / done) — real branching.
+- **`Send`-based fan-out** to a **compiled worker subgraph** (3 parallel branches, fan-in via reducer) — real delegation.
+- **Retry loop with a real backoff sleep** on scripted transient tool failure — real retry behavior.
+- **New crash windows**: mid-fan-out (partial completion — some workers committed, others not), post-branch-decision, during retry backoff.
 
-New files: `common_v2.py` (scenario), `agent_graph_v2.py` (graph),
-`agent_run_v2.py` (runner), `crash_harness_v2.py` (driver),
-`config_v2.json` (seed 20261011). Results: `LANGGRAPH_PORT_V2.md`.
-Shared unchanged: `tool_server.py`, `file_tool.py`, `claim_log.py`,
-`common.py` scoring.
+New files: `common_v2.py` (scenario), `agent_graph_v2.py` (graph), `agent_run_v2.py` (runner), `crash_harness_v2.py` (driver), `config_v2.json` (seed 20261011). Results: `LANGGRAPH_PORT_V2.md`. Shared unchanged: `tool_server.py`, `file_tool.py`, `claim_log.py`, `common.py` scoring.
 
 ## What each file is
 
@@ -95,19 +73,10 @@ Shared unchanged: `tool_server.py`, `file_tool.py`, `claim_log.py`,
 
 ## Reproducing
 
-The crash schedule is fully seeded (`config.json: seed=20261010`; per-episode
-RNG = `seed + ep*7919 + cond_offset*104729`). Given the same code, config,
-and seed, episode `i` of each condition draws the same plan seed, crash step,
-and landing. Results land in `results_langgraph.json` (per-episode rows
-included).
+The crash schedule is fully seeded (`config.json: seed=20261010`; per-episode RNG = `seed + ep*7919 + cond_offset*104729`). Given the same code, config, and seed, episode `i` of each condition draws the same plan seed, crash step, and landing. Results land in `results_langgraph.json` (per-episode rows included).
 
 ## Design notes
 
-- The planner is scripted/deterministic — the fault under study is
-  harness-side crash consistency, not agent cognition (documented in
-  `../LANGGRAPH_PORT.md`, "what's real vs simulated").
-- LangGraph's own checkpointer is deliberately **not** used: it checkpoints
-  trajectory state, which is exactly the structure the paper shows is
-  insufficient. Durability comes from the claim log + checkpoint file.
-- Progress markers in `progress.log` are chaos-instrumentation (like
-  observing a log line before `kill -9`); the agent never sees the crash plan.
+- The planner is scripted/deterministic — the fault under study is harness-side crash consistency, not agent cognition (documented in `../LANGGRAPH_PORT.md`, "what's real vs simulated").
+- LangGraph's own checkpointer is deliberately **not** used: it checkpoints trajectory state, which is exactly the structure the paper shows is insufficient. Durability comes from the claim log + checkpoint file.
+- Progress markers in `progress.log` are chaos-instrumentation (like observing a log line before `kill -9`); the agent never sees the crash plan.
