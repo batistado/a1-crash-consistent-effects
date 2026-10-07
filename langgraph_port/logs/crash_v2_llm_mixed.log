@@ -37,3 +37,5 @@
 [09:59:58]   [baseline] 33/60 dup=2 miss=0 eo=False crash=retry_backoff
 [10:00:08]   [baseline] 34/60 dup=2 miss=0 eo=False crash=mid_fanout
 [10:00:17]   [baseline] 35/60 dup=2 miss=0 eo=False crash=retry_backoff
+[10:00:50]   [baseline] 37/60 dup=2 miss=0 eo=False crash=retry_backoff
+[10:01:09]   [baseline] 39/60 dup=2 miss=0 eo=False crash=mid_fanout
