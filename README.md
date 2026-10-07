@@ -57,6 +57,6 @@ Tracked here explicitly; audited 2026-10-07 against the actual files.
 | 9 | DESIGN_V2.md wording ("scripted planner" → LLM planner, once run 7 lands) | ✅ |
 | 10 | Humanize v2 + LLM reports | ⬜ |
 | 11 | Final GitHub push of complete state | ✅ 2026-10-07 |
-| 12 | Pre-submission overlap re-check | ⏳ running 2026-10-07 |
+| 12 | Pre-submission overlap re-check (final: PASS 2026-10-07, 4 new must-cites) | ✅ |
 
 Verdict: evidence base complete; nothing submittable until items 7–8 land. See `RUNLOG.md` for the append-only experiment history.
