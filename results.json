@@ -1,0 +1,72 @@
+{
+  "seed": 20261007,
+  "episodes_per_condition": 1500,
+  "p_in_window": 0.75,
+  "p_post_checkpoint": 0.15,
+  "p_reword_args": 0.5,
+  "p_plan_shift": 0.3,
+  "conditions": {
+    "baseline": {
+      "episodes": 1500,
+      "duplicate_effect_rate": 0.7687,
+      "exactly_once_rate": 0.2313,
+      "mean_duplicates_per_episode": 0.7687,
+      "mean_missing_per_episode": 0.0,
+      "episodes_with_duplicates": 1153,
+      "zombie_probes_fenced": 0,
+      "crash_landings": {
+        "pre_step": 144,
+        "in_window": 1153,
+        "post_checkpoint": 203
+      }
+    },
+    "content_hash": {
+      "episodes": 1500,
+      "duplicate_effect_rate": 0.3667,
+      "exactly_once_rate": 0.6333,
+      "mean_duplicates_per_episode": 0.3667,
+      "mean_missing_per_episode": 0.0,
+      "episodes_with_duplicates": 550,
+      "zombie_probes_fenced": 0,
+      "crash_landings": {
+        "in_window": 1139,
+        "post_checkpoint": 217,
+        "pre_step": 144
+      }
+    },
+    "deterministic": {
+      "episodes": 1500,
+      "duplicate_effect_rate": 0.2113,
+      "exactly_once_rate": 0.7887,
+      "mean_duplicates_per_episode": 0.2113,
+      "mean_missing_per_episode": 0.0,
+      "episodes_with_duplicates": 317,
+      "zombie_probes_fenced": 0,
+      "crash_landings": {
+        "post_checkpoint": 237,
+        "in_window": 1127,
+        "pre_step": 136
+      }
+    },
+    "wal": {
+      "episodes": 1500,
+      "duplicate_effect_rate": 0.0,
+      "exactly_once_rate": 1.0,
+      "mean_duplicates_per_episode": 0.0,
+      "mean_missing_per_episode": 0.0,
+      "episodes_with_duplicates": 0,
+      "zombie_probes_fenced": 1500,
+      "crash_landings": {
+        "in_window": 1121,
+        "pre_step": 149,
+        "post_checkpoint": 230
+      }
+    }
+  },
+  "crash_landing_fractions_overall": {
+    "pre_step": 0.0955,
+    "in_window": 0.7567,
+    "post_checkpoint": 0.1478
+  },
+  "elapsed_seconds": 1.2
+}

@@ -1,0 +1,64 @@
+{
+  "model": "gpt-4o-mini",
+  "temperature": 0.7,
+  "episodes": [
+    {
+      "episode": 0,
+      "landing": "in_window",
+      "crashed": true,
+      "goal_steps": 5,
+      "claims_attempted": 6,
+      "claims_valid_first": 4,
+      "violations": 0,
+      "reemissions": 0,
+      "rewords": 0,
+      "shift": false,
+      "order_deviated": false,
+      "duplicates": 0,
+      "missing": 0,
+      "exactly_once": true
+    },
+    {
+      "episode": 1,
+      "landing": "in_window",
+      "crashed": true,
+      "goal_steps": 5,
+      "claims_attempted": 12,
+      "claims_valid_first": 12,
+      "violations": 0,
+      "reemissions": 7,
+      "rewords": 7,
+      "shift": false,
+      "order_deviated": false,
+      "duplicates": 0,
+      "missing": 0,
+      "exactly_once": true
+    }
+  ],
+  "seed": 42,
+  "assumed_rates": {
+    "p_reword_args": 0.5,
+    "p_plan_shift": 0.3
+  },
+  "measured": {
+    "claim_adherence_step_rate": 0.8889,
+    "claim_adherence_episode_rate": 1.0,
+    "episodes_with_crash": 2,
+    "reemission_rate": 0.5,
+    "reword_rate": 0.5,
+    "plan_shift_rate": 0.0,
+    "order_deviation_rate": 0.0,
+    "duplicate_effect_rate": 0.0,
+    "exactly_once_rate": 1.0,
+    "mean_missing_per_episode": 0.0
+  },
+  "crash_landings": {
+    "in_window": 2
+  },
+  "spend": {
+    "llm_calls": 18,
+    "prompt_tokens": 4973,
+    "completion_tokens": 782,
+    "estimated_usd": 0.0012
+  }
+}
