@@ -197,9 +197,38 @@ def partial_fanout_stats(run_dir):
 
 
 # --------------------------------------------------------------------------
+# LLM-planner ground truth: round-1 route from the episode's actual
+# decisions (decisions.jsonl), not from the scripted scenario generator.
+# Returns (route1, any_fallback). route1 is None when no decision was
+# ever recorded (e.g. recovery failed before round 1).
+# --------------------------------------------------------------------------
+def _llm_route1_from_decisions(run_dir):
+    path = os.path.join(run_dir, "decisions.jsonl")
+    route1, any_fb = None, False
+    try:
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    d = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if d.get("round") == 1 and d.get("route") in (
+                        "fan_out", "escalate"):
+                    route1 = d["route"]
+                    any_fb = any_fb or bool(d.get("fallback"))
+    except FileNotFoundError:
+        pass
+    return route1, any_fb
+
+
+# --------------------------------------------------------------------------
 # one episode
 # --------------------------------------------------------------------------
-def run_episode(cfg, server_url, server_state_dir, cond, ep_idx):
+def run_episode(cfg, server_url, server_state_dir, cond, ep_idx, run_tag,
+                planner):
     rng = random.Random(cfg["seed"] + ep_idx * 7919 + COND_OFFSET[cond] * 104729)
     plan_seed = rng.randrange(1 << 60)
     recover_seed = rng.randrange(1 << 60)
@@ -211,12 +240,12 @@ def run_episode(cfg, server_url, server_state_dir, cond, ep_idx):
     else:
         crash_type = "retry_backoff"
     wid = f"lgv2-{cond}-{ep_idx:04d}-{plan_seed & 0xffff:04x}"
-    run_dir = os.path.join(PORT_DIR, "runs", "v2", cond, wid)
+    run_dir = os.path.join(PORT_DIR, "runs", run_tag, cond, wid)
     os.makedirs(run_dir, exist_ok=True)
     atomic_write_json(os.path.join(run_dir, "run_meta.json"), {
         "workflow_id": wid, "condition": cond, "episode": ep_idx,
         "plan_seed": plan_seed, "recover_seed": recover_seed,
-        "crash_type": crash_type})
+        "crash_type": crash_type, "planner": planner})
 
     t0 = time.time()
     base_args = ["--workflow-id", wid, "--run-dir", run_dir,
@@ -226,7 +255,8 @@ def run_episode(cfg, server_url, server_state_dir, cond, ep_idx):
                  "--marker-sleep-ms", str(cfg["marker_sleep_ms"]),
                  "--retry-backoff-s", str(cfg["retry_backoff_s"]),
                  "--p-reword", str(cfg["p_reword"]),
-                 "--p-plan-shift", str(cfg["p_plan_shift"])]
+                 "--p-plan-shift", str(cfg["p_plan_shift"]),
+                 "--planner", planner]
 
     # ---- fresh generation ----
     fresh_out = open(os.path.join(run_dir, "fresh_stdout.log"), "w")
@@ -278,7 +308,26 @@ def run_episode(cfg, server_url, server_state_dir, cond, ep_idx):
               if crash_type == "mid_fanout" else None)
 
     # ---- ground-truth scoring from the tool-side ledgers ----
-    scenario = make_scenario(random.Random(plan_seed))
+    # Scripted planner: the scenario (and hence intended effects) is fully
+    # determined by plan_seed. LLM planner: round 1's route came from the
+    # model, so intended effects are built from the ACTUAL decisions the
+    # episode took. The recovery generation completes the episode, so its
+    # round-1 decision (the last one appended) is authoritative.
+    gt_fallback = False
+    if planner == "llm":
+        route1, llm_fb = _llm_route1_from_decisions(run_dir)
+        if route1 is None:
+            scenario = make_scenario(random.Random(plan_seed))
+            gt_fallback = True
+        else:
+            scenario = {"rounds": [
+                {"round": 0, "route": "fan_out", "branches": [0, 1, 2]},
+                {"round": 1, "route": route1,
+                 "branches": ([0, 1, 2] if route1 == "fan_out" else ["esc"])},
+            ]}
+    else:
+        scenario = make_scenario(random.Random(plan_seed))
+        route1, llm_fb = None, False
     intended = intended_effects(scenario)
     committed = []
     ledger_path = os.path.join(server_state_dir, "ledger.jsonl")
@@ -298,6 +347,8 @@ def run_episode(cfg, server_url, server_state_dir, cond, ep_idx):
     rec = {
         "workflow_id": wid, "condition": cond, "episode": ep_idx,
         "plan_seed": plan_seed, "recover_seed": recover_seed,
+        "planner": planner, "llm_route1": route1,
+        "llm_fallback": llm_fb, "ground_truth_fallback": gt_fallback,
         "crash_type": crash_type,
         "crashed": crashed, "crash_missed": crash_missed,
         "recover_ok": recover_ok,
@@ -320,6 +371,11 @@ def main():
     ap.add_argument("--out", default=None)
     ap.add_argument("--jsonl-out", default=None)
     ap.add_argument("--overwrite", action="store_true")
+    ap.add_argument("--run-tag", default="v2",
+                    help="run directory tag: runs/<tag>/... (default v2)")
+    ap.add_argument("--planner", choices=["scripted", "llm"],
+                    default="scripted",
+                    help="round-1 routing decision source")
     args = ap.parse_args()
     cfg = json.load(open(args.config))
     if args.conditions:
@@ -329,13 +385,14 @@ def main():
     if args.overwrite:
         import shutil
         for cond in cfg["conditions"]:
-            cdir = os.path.join(PORT_DIR, "runs", "v2", cond)
+            cdir = os.path.join(PORT_DIR, "runs", args.run_tag, cond)
             if os.path.isdir(cdir):
                 shutil.rmtree(cdir)
                 log(f"--overwrite: removed stale run dir {cdir}")
 
     ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
-    server_state_dir = os.path.join(PORT_DIR, "runs", "v2", "_server", ts)
+    server_state_dir = os.path.join(PORT_DIR, "runs", args.run_tag,
+                                    "_server", ts)
     server_proc, server_url = start_server(
         server_state_dir, cfg["server_host"], cfg["server_port"])
     out_path = args.out or os.path.join(PORT_DIR, "results_langgraph_v2.json")
@@ -347,7 +404,8 @@ def main():
             n = cfg["episodes_per_condition"]
             log(f"condition={cond} episodes={n}")
             for i in range(n):
-                rec = run_episode(cfg, server_url, server_state_dir, cond, i)
+                rec = run_episode(cfg, server_url, server_state_dir, cond, i,
+                                  args.run_tag, args.planner)
                 episodes.append(rec)
                 with open(jsonl_path, "a") as jf:
                     jf.write(json.dumps(rec) + "\n")
@@ -361,18 +419,53 @@ def main():
 
     # ---- overhead: aggregate claim-log per-record latencies (wal only) ----
     latencies = []
+    llm_spend_usd = 0.0
+    llm_calls = 0
     for e in episodes:
         if e["condition"] != "wal":
             continue
-        rd = os.path.join(PORT_DIR, "runs", "v2", "wal", e["workflow_id"])
+        rd = os.path.join(PORT_DIR, "runs", args.run_tag, "wal",
+                          e["workflow_id"])
         for mode in ("fresh", "recover"):
             p = os.path.join(rd, f"claim_timings_v2_{mode}.json")
             doc = read_json(p, [])
             latencies.extend(x["latency_s"] for x in doc if x.get("latency_s"))
 
     summary = {"config": cfg,
+               "run_tag": args.run_tag,
+               "planner": args.planner,
                "server_state_dir": server_state_dir,
                "conditions": {}}
+    if args.planner == "llm":
+        # Aggregate LLM spend + route distribution across all episodes.
+        routes = {"fan_out": 0, "escalate": 0}
+        fallbacks = 0
+        for e in episodes:
+            rd = os.path.join(PORT_DIR, "runs", args.run_tag,
+                              e["condition"], e["workflow_id"])
+            sp = os.path.join(rd, "llm_spend.json")
+            try:
+                with open(sp) as f:
+                    s = json.load(f)
+                llm_spend_usd += s.get("usd", 0.0)
+                llm_calls += s.get("calls", 0)
+            except (FileNotFoundError, json.JSONDecodeError):
+                pass
+            if e.get("llm_route1") in routes:
+                routes[e["llm_route1"]] += 1
+            if e.get("llm_fallback"):
+                fallbacks += 1
+        summary["llm"] = {
+            "model": "gpt-4o-mini",
+            "total_spend_usd": round(llm_spend_usd, 4),
+            "total_calls": llm_calls,
+            "route1_distribution": routes,
+            "episodes_with_fallback": fallbacks,
+            "episodes_ground_truth_fallback": sum(
+                1 for e in episodes if e.get("ground_truth_fallback")),
+        }
+        log(f"LLM planner: spend=${llm_spend_usd:.4f} calls={llm_calls} "
+            f"routes={routes} fallbacks={fallbacks}")
     for cond in cfg["conditions"]:
         ce = [e for e in episodes if e["condition"] == cond]
         n = len(ce)

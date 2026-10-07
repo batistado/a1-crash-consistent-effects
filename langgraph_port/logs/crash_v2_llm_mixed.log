@@ -1,0 +1,39 @@
+[09:46:14] tool server up at http://127.0.0.1:8768
+[09:46:14] condition=wal episodes=60
+[09:47:40]   [wal] 10/60 dup=0 miss=0 eo=True crash=mid_fanout
+[09:49:06]   [wal] 20/60 dup=0 miss=0 eo=True crash=retry_backoff
+[09:50:30]   [wal] 30/60 dup=0 miss=0 eo=True crash=mid_fanout
+[09:51:55]   [wal] 40/60 dup=0 miss=0 eo=True crash=mid_fanout
+[09:53:17]   [wal] 50/60 dup=0 miss=0 eo=True crash=retry_backoff
+[09:54:48]   [wal] 60/60 dup=0 miss=0 eo=True crash=mid_fanout
+[09:54:48] condition=baseline episodes=60
+[09:54:58]   [baseline] 1/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:55:19]   [baseline] 3/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:55:28]   [baseline] 4/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:55:48]   [baseline] 6/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:55:57]   [baseline] 7/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:56:06]   [baseline] 8/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:56:14]   [baseline] 9/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:56:23]   [baseline] 10/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:56:32]   [baseline] 11/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:56:41]   [baseline] 12/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:56:50]   [baseline] 13/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:56:59]   [baseline] 14/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:57:08]   [baseline] 15/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:57:17]   [baseline] 16/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:57:35]   [baseline] 18/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:57:45]   [baseline] 19/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:57:56]   [baseline] 20/60 dup=0 miss=0 eo=True crash=post_branch
+[09:58:07]   [baseline] 21/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:58:16]   [baseline] 22/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:58:35]   [baseline] 24/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:58:54]   [baseline] 26/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:59:03]   [baseline] 27/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:59:12]   [baseline] 28/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:59:22]   [baseline] 29/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:59:31]   [baseline] 30/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:59:40]   [baseline] 31/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:59:49]   [baseline] 32/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:59:58]   [baseline] 33/60 dup=2 miss=0 eo=False crash=retry_backoff
+[10:00:08]   [baseline] 34/60 dup=2 miss=0 eo=False crash=mid_fanout
+[10:00:17]   [baseline] 35/60 dup=2 miss=0 eo=False crash=retry_backoff

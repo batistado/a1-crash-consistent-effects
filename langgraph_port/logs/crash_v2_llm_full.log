@@ -1,0 +1,72 @@
+[09:02:41] --overwrite: removed stale run dir /home/hatch/workspace/orx-projects/a1-crash-consistent-effects/langgraph_port/runs/v2_llm/wal
+[09:02:41] tool server up at http://127.0.0.1:8767
+[09:02:41] condition=wal episodes=60
+[09:04:12]   [wal] 10/60 dup=0 miss=0 eo=True crash=mid_fanout
+[09:05:43]   [wal] 20/60 dup=0 miss=0 eo=True crash=retry_backoff
+[09:07:04]   [wal] 30/60 dup=0 miss=0 eo=True crash=mid_fanout
+[09:08:28]   [wal] 40/60 dup=0 miss=0 eo=True crash=mid_fanout
+[09:09:50]   [wal] 50/60 dup=0 miss=0 eo=True crash=retry_backoff
+[09:11:20]   [wal] 60/60 dup=0 miss=0 eo=True crash=mid_fanout
+[09:11:20] condition=baseline episodes=60
+[09:11:30]   [baseline] 1/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:11:49]   [baseline] 3/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:11:58]   [baseline] 4/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:12:18]   [baseline] 6/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:12:27]   [baseline] 7/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:12:36]   [baseline] 8/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:12:46]   [baseline] 9/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:12:55]   [baseline] 10/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:13:04]   [baseline] 11/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:13:13]   [baseline] 12/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:13:22]   [baseline] 13/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:13:31]   [baseline] 14/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:13:41]   [baseline] 15/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:13:50]   [baseline] 16/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:14:09]   [baseline] 18/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:14:18]   [baseline] 19/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:14:28]   [baseline] 20/60 dup=0 miss=0 eo=True crash=post_branch
+[09:14:38]   [baseline] 21/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:14:47]   [baseline] 22/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:15:06]   [baseline] 24/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:15:24]   [baseline] 26/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:15:33]   [baseline] 27/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:15:42]   [baseline] 28/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:15:51]   [baseline] 29/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:16:00]   [baseline] 30/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:16:10]   [baseline] 31/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:16:19]   [baseline] 32/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:16:28]   [baseline] 33/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:16:37]   [baseline] 34/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:16:46]   [baseline] 35/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:17:07]   [baseline] 37/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:17:25]   [baseline] 39/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:17:34]   [baseline] 40/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:17:43]   [baseline] 41/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:18:01]   [baseline] 43/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:18:10]   [baseline] 44/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:18:18]   [baseline] 45/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:18:27]   [baseline] 46/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:18:36]   [baseline] 47/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:18:54]   [baseline] 49/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:19:03]   [baseline] 50/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:19:11]   [baseline] 51/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:19:21]   [baseline] 52/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:19:30]   [baseline] 53/60 dup=2 miss=0 eo=False crash=retry_backoff
+[09:19:49]   [baseline] 55/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:20:08]   [baseline] 57/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:20:17]   [baseline] 58/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:20:26]   [baseline] 59/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:20:35]   [baseline] 60/60 dup=2 miss=0 eo=False crash=mid_fanout
+[09:20:35] condition=deterministic episodes=60
+[09:22:07]   [deterministic] 10/60 dup=0 miss=0 eo=True crash=retry_backoff
+[09:23:37]   [deterministic] 20/60 dup=0 miss=0 eo=True crash=mid_fanout
+[09:25:08]   [deterministic] 30/60 dup=0 miss=0 eo=True crash=retry_backoff
+[09:26:46]   [deterministic] 40/60 dup=0 miss=0 eo=True crash=mid_fanout
+[09:28:18]   [deterministic] 50/60 dup=0 miss=0 eo=True crash=mid_fanout
+[09:30:29]   [deterministic] 60/60 dup=0 miss=0 eo=True crash=retry_backoff
+[09:30:30] LLM planner: spend=$0.0069 calls=214 routes={'fan_out': 180, 'escalate': 0} fallbacks=0
+[09:30:30] [wal] dup_rate=0.0 exactly_once=1.0 partial=1.0
+[09:30:30] [baseline] dup_rate=0.8 exactly_once=0.2 partial=1.0
+[09:30:30] [deterministic] dup_rate=0.0 exactly_once=1.0 partial=1.0
+[09:30:30] claim-log latency p50=0.01639s p99=0.054566s n=1038
+[09:30:30] wrote results_langgraph_v2_llm.json
