@@ -303,3 +303,10 @@ spend, verdict. Newest at the bottom. Times in PDT unless noted.
 - **Results:** wal dup 0.000 / exactly-once 1.000 (60/60); baseline dup 0.800 / eo 0.200; deterministic dup 0.000 / eo 1.000. Zero missing effects.
 - **Spend:** $0.0117, 214 LLM calls (cap $5).
 - **Verdict:** PASS. The protocol holds exactly-once under a genuine mixed supervisor route distribution, not just a uniform one. This closes the uniform-distribution limitation from the temp-0 run. Next: update DESIGN_V2.md + real-LLM report, push to GitHub, draft manuscript.
+
+## 2026-10-07 ~11:26 PDT — Final pre-submission overlap/novelty re-check COMPLETE (requested by Mohammed)
+- Method: fresh web + arXiv searches 2026-10-07, prioritizing publications after 2026-06 (4th overlap pass today). Queries: exactly-once + agents/LLM tool use; crash consistency / WAL for agent frameworks (LangGraph, CrewAI, AutoGen, OpenAI Agents SDK); idempotency keys; saga pattern; checkpoint/recovery with external side effects; durable execution.
+- Verdict: PASS — no overlap. No publication combines the benign commit→checkpoint crash window + write-ahead effect-claim log with reconciliation-first recovery + measured 0 duplicates / exactly-once 1.000 + idempotency-key fragility analysis.
+- 4 new must-cites for the manuscript: Khan "Resume Means Resume" (arXiv:2608.03836), Zheng et al. "When Can Agents Safely Checkpoint..." (arXiv:2608.22928), "Safe to Resume?" (arXiv:2608.29381), LogAct (arXiv:2604.07988). Khan independently confirms our baseline fault (LangGraph re-executes durably recorded work after SIGKILL) — cite as independent confirmation.
+- Watch items (not threats): CONTINUUM GitHub ledger, avatar-engine "committed intent step", Databricks mason docs acknowledging at-least-once external effects.
+- Report: OVERLAP_CHECK_FINAL_20261007.md. TPDS checklist item 12 (pre-submission overlap re-check) DONE. Remaining: manuscript draft (parked per Mohammed — B1 first), report humanizing.
