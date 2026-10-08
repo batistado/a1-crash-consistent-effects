@@ -48,9 +48,10 @@ from typing_extensions import TypedDict
 from checkpoint_store import CheckpointStore  # noqa: F401  (kept for parity)
 from claim_log import ClaimLog
 from common import atomic_write_json, is_file_action, read_json
-from common_v2 import (branch_key, claim_key_v2, claim_uid, escalate_effect,
+from common_v2 import (branch_key, canonical_target_v2, claim_key_v2,
+                       claim_uid, content_key_v2, escalate_effect,
                        intended_effects, is_transient_scripted, make_scenario,
-                       supervisor_route, worker_effects)
+                       reword_target_v2, supervisor_route, worker_effects)
 from file_tool import FileTool, FencedError
 
 # Per-record claim-log latency instrumentation (chaos/measurement only).
@@ -71,6 +72,7 @@ class AgentStateV2(TypedDict, total=False):
     retry_backoff_s: float
     p_reword: float
     p_plan_shift: float
+    reword_recovery: bool   # E2b: recovery replanning rephrases targets
     planner: str             # scripted | llm (round-1 routing decision source)
     scenario: dict
     round: int
@@ -101,6 +103,8 @@ class WorkerState(TypedDict, total=False):
     skip_effect: bool
     claim_uid: str
     claim_key: Optional[str]
+    key_branch: Optional[int]   # E2a: shifted positional index for keys
+    reword_recovery: bool       # E2b: targets rephrased in recovery
     branch_results: Annotated[list, operator.add]
 
 
@@ -361,9 +365,24 @@ def dispatch_router(state):
     todo = state["todo"]
     if not todo:
         return "aggregate"
+    # E2a (det_shift): recovery replanning reprioritizes — rotate dispatch
+    # positions so re-derived positional keys differ from fresh. The worker
+    # still executes the ORIGINAL branch's effects (branch label unchanged);
+    # only the key-derivation position shifts.
+    # E2b (reword_recovery): recovery replanning rephrases targets.
+    key_branch_of = {}
+    if state["condition"] == "det_shift" and state["mode"] == "recover":
+        rotated = todo[1:] + todo[:1]
+        key_branch_of = {b: i for i, b in enumerate(rotated)}
+        _marker(state, f"RESHIFT rotated={[str(b) for b in rotated]}",
+                sleep=False)
     pkts = []
     for b in todo:
-        pkts.append(Send("worker_sub", {
+        effects = worker_effects(state["round"], b)
+        if state.get("reword_recovery") and state["mode"] == "recover":
+            effects = [dict(e, target=reword_target_v2(e["target"]))
+                       for e in effects]
+        pkt = {
             "workflow_id": state["workflow_id"],
             "run_dir": state["run_dir"],
             "condition": state["condition"],
@@ -373,10 +392,15 @@ def dispatch_router(state):
             "retry_backoff_s": state["retry_backoff_s"],
             "round": state["round"],
             "branch": b,
-            "effects": worker_effects(state["round"], b),
+            "effects": effects,
             "idx": 0, "attempts": 0, "transient": False,
             "skip_effect": False,
-        }))
+        }
+        if b in key_branch_of:
+            pkt["key_branch"] = key_branch_of[b]
+        if state.get("reword_recovery"):
+            pkt["reword_recovery"] = True
+        pkts.append(Send("worker_sub", pkt))
     return pkts
 
 
@@ -410,8 +434,10 @@ def esc_claim_node(state):
             log.append_claim("esc", eff["action"], eff["target"], "v2 esc",
                              key, state["epoch"])
             CLAIM_TIMINGS.append(("claim", time.perf_counter() - t0))
-    elif state["condition"] == "deterministic":
+    elif state["condition"] in ("deterministic", "native"):
         key = claim_key_v2(state["workflow_id"], 1, "esc", 0, eff["action"])
+    elif state["condition"] == "det_content":
+        key = content_key_v2(eff["action"], eff["target"])
     _marker(state, f"ESCALATE CLAIM skip={skip}")
     return {"esc_key": key, "esc_skip": skip}
 
@@ -453,7 +479,12 @@ def w_claim_node(state):
     key, skip = None, False
     if cond == "wal":
         log = ClaimLog(os.path.join(state["run_dir"], "claim.log"))
-        existing = log.find_by_identity(action, target)
+        # E2b: the business identity is reword-invariant — canonicalize the
+        # lookup target so a rephrased retry matches the original claim.
+        # canonical_target_v2 is a no-op for non-reworded targets.
+        lookup_target = (canonical_target_v2(target)
+                         if state.get("reword_recovery") else target)
+        existing = log.find_by_identity(action, lookup_target)
         if existing is not None:
             # Never re-derive: reuse the durable key. Committed -> skip the
             # effect entirely; uncommitted (should not survive recovery, but
@@ -467,9 +498,22 @@ def w_claim_node(state):
             log.append_claim(uid, action, target, f"v2 {uid}", key,
                              state["epoch"])
             CLAIM_TIMINGS.append(("claim", time.perf_counter() - t0))
-    elif cond == "deterministic":
+    elif cond in ("deterministic", "native"):
+        # native: same durable operation identities as deterministic; the
+        # difference is the recovery mechanism (checkpointer resume), not
+        # the key derivation.
         key = claim_key_v2(wid, state["round"], state["branch"],
                            state["idx"], action)
+    elif cond == "det_shift":
+        # E2a: positional keys, but recovery reprioritizes — the positional
+        # index used for key derivation (key_branch) differs from fresh.
+        kb = state.get("key_branch", state["branch"])
+        key = claim_key_v2(wid, state["round"], kb,
+                           state["idx"], action)
+    elif cond == "det_content":
+        # E2b: content-hash keys bind identity to the exact target string;
+        # recovery rewording changes the hash.
+        key = content_key_v2(action, target)
     _wmarker(state, "CLAIM", f"skip={skip}")
     return {"claim_uid": uid, "claim_key": key, "skip_effect": skip}
 
@@ -597,6 +641,11 @@ def worker_sub_node(packet):
         "transient": False,
         "skip_effect": False,
     }
+    # E2: identity-shift bookkeeping crosses the Send boundary explicitly.
+    if "key_branch" in packet:
+        wstate["key_branch"] = packet["key_branch"]
+    if packet.get("reword_recovery"):
+        wstate["reword_recovery"] = True
     final = _WORKER_SUBGRAPH.invoke(wstate,
                                     config={"recursion_limit": 1000})
     return {"branch_results": final.get("branch_results", [])}

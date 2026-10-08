@@ -1,0 +1,32 @@
+[
+  {
+    "n_claims": 100,
+    "records": 200,
+    "append_p50_ms": 0.028,
+    "append_p99_ms": 20.479,
+    "append_max_ms": 49.431,
+    "find_hit_ms": 6.624,
+    "find_miss_ms": 5.768,
+    "load_s": 0.003
+  },
+  {
+    "n_claims": 1000,
+    "records": 2000,
+    "append_p50_ms": 0.028,
+    "append_p99_ms": 8.606,
+    "append_max_ms": 35.146,
+    "find_hit_ms": 16.827,
+    "find_miss_ms": 21.337,
+    "load_s": 0.0139
+  },
+  {
+    "n_claims": 10000,
+    "records": 20000,
+    "append_p50_ms": 0.029,
+    "append_p99_ms": 4.166,
+    "append_max_ms": 60.637,
+    "find_hit_ms": 850.214,
+    "find_miss_ms": 636.89,
+    "load_s": 0.7888
+  }
+]

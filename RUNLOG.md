@@ -325,3 +325,26 @@ spend, verdict. Newest at the bottom. Times in PDT unless noted.
 - Suggested central contribution: "a crash-recovery protocol that preserves tool-operation identities across agent replanning, with explicit receiver assumptions and fault-injection evaluation."
 - Revision plan: REVISION_PLAN_20261007.md (checklist). Order: (1) related-work + bibliography fixes, (2) safety/completion split in claims + uncertainty bounds, (3) theorem repairs, (4) protocol spec completion, (5) new experiments (native baseline, identity-shift case, scale), (6) re-review before TPDS.
 - Spend: $0. Next: work the checklist; B1 manuscript PDF building in parallel.
+
+## 2026-10-08 ~01:50 PDT — A1 Phase 4 E4 fencing trace COMPLETE
+- Instrumented re-run of sandbox no_fencing (200 eps, seed 20261010, $0).
+- Result: 102/200 episodes with duplicates (0.51, cf. 0.4927 at n=1500).
+- Classification of offending calls: 102/102 = type (b) fresh-key zombie commits; 0 type (a) same-key retries.
+- Worked trace: fresh commits (action,target) with det: key epoch 0; zombie retries with ch: key (fresh content-hash over reworded args) at stale epoch 0<1; accepted (no fence) → semantic duplicate.
+- Verdict: PASS. Causal mechanism confirmed — the ~49% is surviving writers creating fresh keys the idempotent receiver cannot suppress (unseen keyspace); delayed same-key retries are correctly suppressed. Answers reviewer §4.
+- Output: results_e4_fencing_trace.json. Driver: src/e4_fencing_trace.py.
+
+## 2026-10-08 ~01:55 PDT — A1 Phase 4 E3b claim-log length scaling COMPLETE
+- Microbenchmark: append N claims + N commits, N in {100, 1000, 10000}; $0.
+- Append latency p50 flat at 0.028–0.029ms (append-only O(1) holds).
+- find_by_identity: 6.6ms (n=100) → 16.8ms (n=1k) → 850ms (n=10k). Linear scan degrades sharply.
+- Verdict: PASS with honest caveat. At experimental scale (<100 claims) lookup is <7ms; the O(n) scan is the scaling bottleneck (850ms at 10k). Report + note indexing as follow-up.
+- Output: results_e3b_logscale.json. Driver: src/e3b_logscale.py.
+
+## 2026-10-08 ~01:45 PDT — A1 Phase 4 campaigns LAUNCHED (E1/E2a/E2b/E3a)
+- E1 native-persistence baseline (SqliteSaver checkpointer, 60 eps, port 8766).
+- E2a identity-shift positional (det_shift/wal/baseline, 60 ea, port 8767).
+- E2b identity-shift content (det_content/wal + reword_recovery, 60 ea, port 8768).
+- E3a fan-out scaling (wal, n_branches 2/4/8, 30 ea, ports 8771-8773).
+- All scripted, $0 API. Early signal: det_shift already duplicating (mid_fanout).
+- Design doc: PHASE4_EXPERIMENT_DESIGNS.md.

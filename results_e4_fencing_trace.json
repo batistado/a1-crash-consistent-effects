@@ -1,0 +1,115 @@
+{
+  "seed": 20261010,
+  "episodes": 200,
+  "condition": "no_fencing (claim log kept, epoch fencing removed)",
+  "episodes_with_duplicates": 102,
+  "duplicate_episode_rate": 0.51,
+  "offending_call_classes": {
+    "a-same-key-recommit": 0,
+    "b-fresh-key-zombie": 102,
+    "b-fresh-key-other": 0
+  },
+  "total_offending_calls": 102,
+  "worked_example": {
+    "episode": 0,
+    "workflow_id": "wf-077607b759a625bd",
+    "landing": "in_window",
+    "full_call_sequence": [
+      {
+        "caller": "fresh",
+        "step_uid": 1,
+        "action": "send_email",
+        "sig": [
+          "send_email",
+          "customer-6843-s1",
+          null
+        ],
+        "key": "det:wf-077607b759a625bd:1:send_email",
+        "epoch": 0,
+        "result": "committed"
+      },
+      {
+        "caller": "fresh",
+        "step_uid": 2,
+        "action": "issue_refund",
+        "sig": [
+          "issue_refund",
+          "customer-3724-s2",
+          null
+        ],
+        "key": "det:wf-077607b759a625bd:2:issue_refund",
+        "epoch": 0,
+        "result": "committed"
+      },
+      {
+        "caller": "fresh",
+        "step_uid": 3,
+        "action": "send_email",
+        "sig": [
+          "send_email",
+          "customer-1042-s3",
+          null
+        ],
+        "key": "det:wf-077607b759a625bd:3:send_email",
+        "epoch": 0,
+        "result": "committed"
+      },
+      {
+        "caller": "recovery",
+        "step_uid": 3,
+        "action": "send_email",
+        "sig": [
+          "send_email",
+          "customer-1042-s3",
+          null
+        ],
+        "key": "det:wf-077607b759a625bd:3:send_email",
+        "epoch": 1,
+        "result": "duplicate_suppressed"
+      },
+      {
+        "caller": "zombie",
+        "step_uid": 3,
+        "action": "send_email",
+        "sig": [
+          "send_email",
+          "customer-1042-s3",
+          null
+        ],
+        "key": "ch:33428fa0b8e1c91b7ca7dad4314524f1",
+        "epoch": 0,
+        "result": "committed"
+      }
+    ],
+    "offending": {
+      "caller": "zombie",
+      "workflow_id": "wf-077607b759a625bd",
+      "step_uid": 3,
+      "action": "send_email",
+      "sig": [
+        "send_email",
+        "customer-1042-s3",
+        null
+      ],
+      "key": "ch:33428fa0b8e1c91b7ca7dad4314524f1",
+      "epoch": 0,
+      "result": "committed",
+      "class": "b-fresh-key-zombie",
+      "prior": {
+        "caller": "fresh",
+        "workflow_id": "wf-077607b759a625bd",
+        "step_uid": 3,
+        "action": "send_email",
+        "sig": [
+          "send_email",
+          "customer-1042-s3",
+          null
+        ],
+        "key": "det:wf-077607b759a625bd:3:send_email",
+        "epoch": 0,
+        "result": "committed"
+      }
+    }
+  },
+  "elapsed_s": 0.0
+}

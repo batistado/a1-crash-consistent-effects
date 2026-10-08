@@ -23,7 +23,8 @@ def main():
     ap.add_argument("--mode", choices=["fresh", "recover"], required=True)
     ap.add_argument("--workflow-id", required=True)
     ap.add_argument("--run-dir", required=True)
-    ap.add_argument("--condition", choices=["wal", "baseline", "deterministic"],
+    ap.add_argument("--condition", choices=["wal", "baseline", "deterministic",
+                                           "det_shift", "det_content"],
                     required=True)
     ap.add_argument("--server-url", required=True)
     ap.add_argument("--plan-seed", type=int, required=True)
@@ -32,6 +33,8 @@ def main():
     ap.add_argument("--retry-backoff-s", type=float, default=1.0)
     ap.add_argument("--p-reword", type=float, default=0.5)
     ap.add_argument("--p-plan-shift", type=float, default=0.3)
+    ap.add_argument("--reword-recovery", action="store_true",
+                    help="E2b: recovery replanning rephrases effect targets")
     ap.add_argument("--planner", choices=["scripted", "llm"],
                     default="scripted",
                     help="round-1 routing decision source: scripted (default) "
@@ -52,6 +55,7 @@ def main():
         "retry_backoff_s": args.retry_backoff_s,
         "p_reword": args.p_reword,
         "p_plan_shift": args.p_plan_shift,
+        "reword_recovery": args.reword_recovery,
         "planner": args.planner,
         "round": 0,
         "error": None,

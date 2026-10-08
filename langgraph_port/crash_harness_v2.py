@@ -33,11 +33,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from common import atomic_write_json, read_json, score_episode
 from common_v2 import intended_effects, make_scenario
+from common_v2 import canonical_target_v2
 from file_tool import FileTool, FencedError
 
 PORT_DIR = os.path.dirname(os.path.abspath(__file__))
 VENV_PY = os.path.join(PORT_DIR, ".venv", "bin", "python")
-COND_OFFSET = {"wal": 0, "baseline": 1, "deterministic": 2}
+COND_OFFSET = {"wal": 0, "baseline": 1, "deterministic": 2, "native": 3,
+               "det_shift": 4, "det_content": 5}
 
 
 def log(msg):
@@ -248,20 +250,33 @@ def run_episode(cfg, server_url, server_state_dir, cond, ep_idx, run_tag,
         "crash_type": crash_type, "planner": planner})
 
     t0 = time.time()
-    base_args = ["--workflow-id", wid, "--run-dir", run_dir,
-                 "--condition", cond, "--server-url", server_url,
-                 "--plan-seed", str(plan_seed),
-                 "--recover-seed", str(recover_seed),
-                 "--marker-sleep-ms", str(cfg["marker_sleep_ms"]),
-                 "--retry-backoff-s", str(cfg["retry_backoff_s"]),
-                 "--p-reword", str(cfg["p_reword"]),
-                 "--p-plan-shift", str(cfg["p_plan_shift"]),
-                 "--planner", planner]
-
+    if cond == "native":
+        # E1: native-persistence baseline — dedicated runner with the
+        # checkpointer-compiled graph (subset of args; no claim-log flags).
+        runner_script = os.path.join(PORT_DIR, "agent_run_v2_native.py")
+        base_args = ["--workflow-id", wid, "--run-dir", run_dir,
+                     "--server-url", server_url,
+                     "--plan-seed", str(plan_seed),
+                     "--recover-seed", str(recover_seed),
+                     "--marker-sleep-ms", str(cfg["marker_sleep_ms"]),
+                     "--retry-backoff-s", str(cfg["retry_backoff_s"])]
+    else:
+        runner_script = os.path.join(PORT_DIR, "agent_run_v2.py")
+        base_args = ["--workflow-id", wid, "--run-dir", run_dir,
+                     "--condition", cond, "--server-url", server_url,
+                     "--plan-seed", str(plan_seed),
+                     "--recover-seed", str(recover_seed),
+                     "--marker-sleep-ms", str(cfg["marker_sleep_ms"]),
+                     "--retry-backoff-s", str(cfg["retry_backoff_s"]),
+                     "--p-reword", str(cfg["p_reword"]),
+                     "--p-plan-shift", str(cfg["p_plan_shift"]),
+                     "--planner", planner]
+        if cfg.get("reword_recovery"):
+            base_args.append("--reword-recovery")
     # ---- fresh generation ----
     fresh_out = open(os.path.join(run_dir, "fresh_stdout.log"), "w")
     proc = subprocess.Popen(
-        [VENV_PY, os.path.join(PORT_DIR, "agent_run_v2.py"),
+        [VENV_PY, runner_script,
          "--mode", "fresh"] + base_args,
         stdout=fresh_out, stderr=subprocess.STDOUT)
     wd = PredicateWatchdog(proc, os.path.join(run_dir, "progress.log"),
@@ -286,7 +301,7 @@ def run_episode(cfg, server_url, server_state_dir, cond, ep_idx, run_tag,
     # ---- recovery generation ----
     rec_out = open(os.path.join(run_dir, "recover_stdout.log"), "w")
     proc2 = subprocess.Popen(
-        [VENV_PY, os.path.join(PORT_DIR, "agent_run_v2.py"),
+        [VENV_PY, runner_script,
          "--mode", "recover"] + base_args,
         stdout=rec_out, stderr=subprocess.STDOUT)
     recover_ok = True
@@ -339,9 +354,17 @@ def run_episode(cfg, server_url, server_state_dir, cond, ep_idx, run_tag,
                 except json.JSONDecodeError:
                     continue
                 if rec.get("workflow_id") == wid:
-                    committed.append((rec.get("action"), rec.get("target")))
+                    tgt = rec.get("target")
+                    # E2b: score on the canonical business identity so a
+                    # reworded retry counts as the same logical effect.
+                    if cfg.get("reword_recovery"):
+                        tgt = canonical_target_v2(tgt)
+                    committed.append((rec.get("action"), tgt))
     for e in FileTool(run_dir).ledger():
-        committed.append((e["action"], e["target"]))
+        tgt = e["target"]
+        if cfg.get("reword_recovery"):
+            tgt = canonical_target_v2(tgt)
+        committed.append((e["action"], tgt))
     sc = score_episode(intended, committed)
 
     rec = {
@@ -373,11 +396,14 @@ def main():
     ap.add_argument("--overwrite", action="store_true")
     ap.add_argument("--run-tag", default="v2",
                     help="run directory tag: runs/<tag>/... (default v2)")
+    ap.add_argument("--reword-recovery", action="store_true",
+                    help="E2b campaign: recovery replanning rephrases targets")
     ap.add_argument("--planner", choices=["scripted", "llm"],
                     default="scripted",
                     help="round-1 routing decision source")
     args = ap.parse_args()
     cfg = json.load(open(args.config))
+    cfg["reword_recovery"] = args.reword_recovery
     if args.conditions:
         cfg["conditions"] = [c.strip() for c in args.conditions.split(",")]
     if args.episodes:
