@@ -310,3 +310,18 @@ spend, verdict. Newest at the bottom. Times in PDT unless noted.
 - 4 new must-cites for the manuscript: Khan "Resume Means Resume" (arXiv:2608.03836), Zheng et al. "When Can Agents Safely Checkpoint..." (arXiv:2608.22928), "Safe to Resume?" (arXiv:2608.29381), LogAct (arXiv:2604.07988). Khan independently confirms our baseline fault (LangGraph re-executes durably recorded work after SIGKILL) — cite as independent confirmation.
 - Watch items (not threats): CONTINUUM GitHub ledger, avatar-engine "committed intent step", Databricks mason docs acknowledging at-least-once external effects.
 - Report: OVERLAP_CHECK_FINAL_20261007.md. TPDS checklist item 12 (pre-submission overlap re-check) DONE. Remaining: manuscript draft (parked per Mohammed — B1 first), report humanizing.
+
+## 2026-10-07 ~18:30 PDT — External reviewer feedback received on A1 manuscript draft
+- Source: research reviewer LLM, private pre-submission assessment of the 17-page draft (did not inspect private code/data).
+- Verdict: NOT READY for TPDS — claims exceed evidence; needs substantive revision, but empirical foundation is useful.
+- 6 major concerns saved verbatim-ish at REVIEWER_FEEDBACK_20261007.md:
+  1. Theorem 1 overclaims — proves 2 key schemes fail, not universal insufficiency; claim-log necessity unproven (durable op table could suffice). Fix: narrow to identity-unstable derivations or prove the information requirement.
+  2. Theorem 2 conflates safety (no duplicates — proven) with completion/liveness (66/70 — not proven); semantic identity underspecified (two legit refunds to same recipient). Fix: split at-most-once vs eventual-commitment vs workflow completion; define logical effect identity.
+  3. LangGraph v2 ties WAL with deterministic keys (0.0000/1.0000 both) — no incremental benefit shown; no native-persistence baseline; Temporal comparison too restrictive. Fix: native-persistence baseline + identity-change-across-recovery case (where deterministic keys should break) + scale measurements.
+  4. Fencing ablation (~49% dups without fencing) lacks causal mechanism — same-key retries should already be suppressed by idempotent receiver; need offending trace with claim identity/key/epoch/receiver decision.
+  5. Related-work errors: LogAct DOES discuss crash recovery (§3.2) — our dismissal inaccurate; ACRFence overlap understated; LIMBO 4% attribution overstated; missing RIFL (SOSP 2015) + classical WAL/durable-execution/sagas citations; "Anonymous" for public authors + wrong titles in refs [1],[2],[3],[6].
+  6. Protocol spec gaps: epoch atomicity, duplicate-call result return, partial JSONL writes, parallel checkpoint frontier, proof inconsistency (Commit exists in-window but proof assumes absent).
+- Reporting corrections: safety vs completion in abstract/conclusion; campaign counts (140 vs 210); 214/214 vs 180/180 decisions; duplicate-rate definitions; 20.3ms overhead definition; Algorithm 1 step/line refs; LaTeX artifacts; uncertainty bounds (0/60 → 4.87%, 0/1,500 → 0.20%).
+- Suggested central contribution: "a crash-recovery protocol that preserves tool-operation identities across agent replanning, with explicit receiver assumptions and fault-injection evaluation."
+- Revision plan: REVISION_PLAN_20261007.md (checklist). Order: (1) related-work + bibliography fixes, (2) safety/completion split in claims + uncertainty bounds, (3) theorem repairs, (4) protocol spec completion, (5) new experiments (native baseline, identity-shift case, scale), (6) re-review before TPDS.
+- Spend: $0. Next: work the checklist; B1 manuscript PDF building in parallel.
