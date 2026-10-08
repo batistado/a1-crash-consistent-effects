@@ -427,3 +427,12 @@ spend, verdict. Newest at the bottom. Times in PDT unless noted.
 - Committed PHASE1_REVISIONS.md + PHASE2_REVISIONS.md + PHASE3_REVISIONS.md (+ RUNLOG/checklist) as 8b6d9e9; pushed to origin main, verified (remote = 8b6d9e9).
 - Phase 5 (manuscript rewrite + re-review) dispatched: applies all revisions to main.tex/FORMAL_MODEL.md, 2.2 = option (b) per drafter recommendation (reversible), paired-timing measurement for the e2e-latency gap, PDF rebuild, honest self re-review vs reviewer feedback, then commit + push.
 - Spend: $0 API.
+
+## 2026-10-08 — A1 Phase 5: manuscript rewrite + re-review COMPLETE
+- **Applied:** All Phase 1–3 revision drafts merged into manuscript/main.tex + FORMAL_MODEL.md. Every OLD block verified exact-match before replacement (34 Phase-1 pairs, 11 Phase-2 main.tex ops, 4 Phase-3 ops, 10 FORMAL_MODEL.md ops).
+- **Merge consistency fixes (2):** (a) Phase 1's 1.3 RIFL paragraph de-claimed "original-result return" → status-only + future-work pointer, per Phase 3's honest finding that the implementation returns status only; (b) conclusion softened from "minimal durable structure" to 2.2(b) "minimal requirement ... sufficient mechanism" language. Phase 1's 1.6b superseded by Phase 2's 2.1f (same contributions item).
+- **2.2 decision:** option (b) — "durable write-ahead identity *information* is necessary; the append-only log is a *sufficient* mechanism." All drafts assumed this. Mohammed can flip to (a) (4 specs revert).
+- **Paired timing (E5p, NEW):** wal/native/deterministic × 20 eps, seed-matched pairing verified 0/60 mismatches. End-to-end: wal-det +0.38s (95% CI [-0.08,+0.83], n.s.); wal-native -1.92s (95% CI [-2.96,-0.88]). Recovery: wal 5.30s / det 5.43s / native 6.75s (dominated by re-execution). All 60: 0 dups, 60/60 eo. Added recover_s instrumentation to crash_harness_v2.py (additive only).
+- **PDF:** 11pp, 0 LaTeX errors, tables 1–7 ordered, comparison table fixed to 8 cols, all citations resolve.
+- **Self re-review:** all 6 major concerns ADDRESSED; reporting corrections complete; honest limitations documented (O(n) lookup, K=16 serialization, 2.2(b) flippable). Report: PHASE5_REREVIEW.md.
+- **Spend:** $0 API (all scripted). **Verdict:** PASS — ready for Mohammed's review; remaining gate is his 2.2(a)/(b) confirmation + PDF read.

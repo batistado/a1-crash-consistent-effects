@@ -314,6 +314,7 @@ def run_episode(cfg, server_url, server_state_dir, cond, ep_idx, run_tag,
 
     # ---- recovery generation ----
     rec_out = open(os.path.join(run_dir, "recover_stdout.log"), "w")
+    t_rec0 = time.time()
     proc2 = subprocess.Popen(
         [VENV_PY, runner_script,
          "--mode", "recover"] + base_args,
@@ -327,6 +328,7 @@ def run_episode(cfg, server_url, server_state_dir, cond, ep_idx, run_tag,
         proc2.kill()
         proc2.wait()
     rec_out.close()
+    recover_s = round(time.time() - t_rec0, 2)
 
     # ---- zombie probes ----
     z_http = probe_http_stale(server_url, wid)
@@ -398,6 +400,7 @@ def run_episode(cfg, server_url, server_state_dir, cond, ep_idx, run_tag,
         "n_intended": len(intended), "n_committed": len(committed),
         "partial_fanout": pstats,
         "elapsed_s": round(time.time() - t0, 2),
+        "recover_s": recover_s,
     }
     return rec
 

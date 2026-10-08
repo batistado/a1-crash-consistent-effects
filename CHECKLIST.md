@@ -22,7 +22,7 @@ Reporting: safety/completion split everywhere; reconcile 140 vs 210 eps, 214 vs 
 Suggested central contribution: "a crash-recovery protocol that preserves tool-operation identities across agent replanning, with explicit receiver assumptions and fault-injection evaluation."
 
 ## Phase 1 — Writing / related-work / reporting fixes
-**Status: DRAFTED 2026-10-07** — all items drafted in PHASE1_REVISIONS.md (pushed 8b6d9e9); manuscript application in Phase 5 (running).
+**Status: APPLIED 2026-10-08** — all items merged into main.tex (Phase 5).
 - [x] 1.1 LogAct characterization corrected (it discusses crash recovery §3.2)
 - [x] 1.2 ACRFence overlap acknowledged; LIMBO 4% attribution narrowed
 - [x] 1.3 Add RIFL (SOSP 2015) + classical WAL / durable-execution / sagas citations
@@ -35,7 +35,7 @@ Suggested central contribution: "a crash-recovery protocol that preserves tool-o
 - [x] 1.10 Overhead: paired end-to-end latency, throughput, recovery time (replace "~1%" estimate)
 
 ## Phase 2 — Theory repair
-**Status: DRAFTED 2026-10-07** — all items drafted in PHASE2_REVISIONS.md (pushed 8b6d9e9); 2.2 decision = option (b); manuscript application in Phase 5 (running).
+**Status: APPLIED 2026-10-08** — all items merged into main.tex + FORMAL_MODEL.md (Phase 5). 2.2 = option (b).
 - [x] 2.1 Theorem 1: narrow to identity-unstable derivations, or prove the information requirement. Defensible: "Idempotency keys derived from mutable argument text or unstable plan positions cannot guarantee duplicate suppression across all admissible recovery replans."
 - [x] 2.2 Claim-log necessity: prove necessary or describe as sufficient (durable op table could suffice)
 - [x] 2.3 Theorem 2: define logical effect identity (distinguish legitimate repeats; recognize equivalent retries)
@@ -43,7 +43,7 @@ Suggested central contribution: "a crash-recovery protocol that preserves tool-o
 - [x] 2.5 Fix proof inconsistency: split cases at Claim durability / tool commitment / Commit durability / checkpoint durability
 
 ## Phase 3 — Protocol specification
-**Status: DRAFTED 2026-10-07** — all items drafted in PHASE3_REVISIONS.md (pushed 8b6d9e9, incl. 5-item honest gap register); manuscript application in Phase 5 (running).
+**Status: APPLIED 2026-10-08** — all items merged into main.tex (Phase 5); 5-item gap register in Limitations.
 - [x] 3.1 Epoch acquisition, ownership, atomic registration; epoch recovery/increase atomicity
 - [x] 3.2 Duplicate-call result return (original results for downstream use)
 - [x] 3.3 Partially written JSONL records: detection + handling
@@ -58,6 +58,15 @@ Suggested central contribution: "a crash-recovery protocol that preserves tool-o
 - Spend: $0 API (all scripted). Fault model: SIGKILL of own harness processes only.
 
 ## Phase 5 — Rewrite + re-review
-- [ ] 5.1 Rewrite abstract/contributions/conclusion around the defensible central contribution
-- [ ] 5.2 Full manuscript pass incorporating Phases 1–4; rebuild PDF
-- [ ] 5.3 Second reviewer assessment before TPDS submission
+**Status: COMPLETE 2026-10-08** — Phases 1–3 applied to main.tex + FORMAL_MODEL.md
+(all OLD blocks verified exact-match; 2 consistency fixes at merge: 1.3 RIFL
+paragraph de-claimed "original-result return" per Phase 3 honest gap; conclusion
+softened to 2.2(b) "minimal requirement" language). 2.2 decision = option (b)
+("durable write-ahead identity information necessary; append-only log sufficient").
+PDF rebuilt: 11pp, 0 LaTeX errors, tables 1–7 ordered, comparison table fixed
+(8 cols). E5 paired-timing run in progress (wal/native/deterministic, seed-matched
+20 eps each; recover_s instrumented).
+- [x] 5.1 Abstract/contributions/conclusion rewritten (safety/completion split; narrowed Thm 1/2)
+- [x] 5.2 Full manuscript pass incorporating Phases 1–4; PDF rebuilt (11pp, 0 errors)
+- [x] 5.3 Paired timing closed (E5p: wal-det +0.38s n.s.; wal-native -1.92s; recovery 5.3/5.4/6.8s) → paper §6.4
+- [ ] 5.4 Mohammed's review: 2.2(a)/(b) confirmation + PDF read → then resubmit decision
