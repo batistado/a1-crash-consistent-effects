@@ -6,8 +6,8 @@ reports) are referenced, not duplicated here.
 
 ## Current status — 2026-10-07 ~19:53 PDT
 - Phases 1–3 revision DRAFTS complete and PUSHED (8b6d9e9): PHASE1_REVISIONS.md (750 lines, incl. 4 corrected bib entries + 2 new discrepancies found: API spend $0.1137 not "under $0.10"; paired e2e latency never measured), PHASE2_REVISIONS.md (Theorem 1 narrowed, Theorem 2 split 2a/2b/2c, 2.2 → option (b) recommended), PHASE3_REVISIONS.md (protocol spec + 5-item honest gap register).
-- Phase 5 (manuscript rewrite + re-review) RUNNING: applying all revisions to main.tex/FORMAL_MODEL.md, 2.2 decision = option (b), paired-timing measurement, PDF rebuild, self re-review vs reviewer feedback.
-- Next: review Phase 5 output, then resubmit decision.
+- Phase 5 COMPLETE 2026-10-08: all revisions applied to main.tex + FORMAL_MODEL.md; 2.2 = option (b); paired-timing gap closed (wal vs det +0.38s n.s., wal vs native -1.92s); PDF rebuilt (11 pp, 0 errors); self re-review: all 6 concerns ADDRESSED. Pushed f401921.
+- Next: Mohammed's review (2.2 confirmation + PDF read) → resubmit decision.
 
 
 ## Reviewer feedback summary (2026-10-07, research reviewer LLM, private pre-submission)
