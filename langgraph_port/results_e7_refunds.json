@@ -1,0 +1,44 @@
+{
+ "test": "e7-two-refunds-then-retries",
+ "pass": true,
+ "commits": 3,
+ "expected_commits": 3,
+ "retries_suppressed": 2,
+ "invariant_audit": "one key per identity; distinct identities distinct keys",
+ "trace": [
+  {
+   "step": "auth-refund-occ0",
+   "key": "k:wf-e7:issue_refund:customer-9:occ0",
+   "reused": false,
+   "receiver": "committed"
+  },
+  {
+   "step": "auth-refund-occ1",
+   "key": "k:wf-e7:issue_refund:customer-9:occ1",
+   "reused": false,
+   "receiver": "committed"
+  },
+  {
+   "event": "crash",
+   "durable_claims": 2
+  },
+  {
+   "step": "retry-refund-occ0",
+   "key": "k:wf-e7:issue_refund:customer-9:occ0",
+   "reused": true,
+   "receiver": "duplicate_suppressed"
+  },
+  {
+   "step": "retry-refund-occ1",
+   "key": "k:wf-e7:issue_refund:customer-9:occ1",
+   "reused": true,
+   "receiver": "duplicate_suppressed"
+  },
+  {
+   "step": "auth-refund-occ2",
+   "key": "k:wf-e7:issue_refund:customer-9:occ2",
+   "reused": false,
+   "receiver": "committed"
+  }
+ ]
+}

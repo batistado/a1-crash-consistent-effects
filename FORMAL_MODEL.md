@@ -24,10 +24,12 @@ A workflow is an ordered sequence of effectful steps W = (s_1, …, s_n). Each s
 Default instantiation: id = (action, target, occurrence), where *occurrence* disambiguates legitimate repetitions. Misidentification breaks the protocol in either direction (over-suppression of distinct intents, or duplicate commits of equivalent retries); the identity function is therefore a deployment modeling assumption (cf. L4), not a theorem. All "exactly-once" claims in §4 are per *durable claim identity* under the deployment's id.
 
 **Normal path** (effectful step s):
-1. H appends `CLAIM(s)` to L. *(write-ahead)*
+1. **Create-or-reuse:** look up the full `(action, target, occurrence)` identity in L. If a durable CLAIM with that identity exists, reuse its key and issue *no* new claim (the post-crash retry path). Otherwise mint a previously-unused key and append `CLAIM(s)` to L. *(write-ahead)*
 2. H invokes `T.call(k(s), epoch, args)`.
 3. H appends `COMMIT(s)` to L, then advances C past s.
    C may advance past s **only if** `COMMIT(s) ∈ L` *(log-fenced checkpoint)*.
+
+The lookup-then-append ordering preserves the key–identity invariant across crashes: a crash between the lookup and the append can leave at most a durable claim whose key a later attempt will *reuse* — never two keys bound to one identity — because claim discipline forbids any tool call without a durable claim, so a key that never reached L could never have reached T. The occurrence counter is a pure function of the durable claims (count of claims for the `(action, target)` pair), so no separate counter state can desynchronize across a crash.
 
 **Recovery path** (H restarts; only L, C, T survive):
 1. `epoch ← epoch + 1`; register with T (fence acquisition).
@@ -80,8 +82,9 @@ duplicates) — a different failure mode from E2b, reported separately.
 
 The failure is a property of the *class* — retry-time derivations whose outputs actually
 change across an admissible replan — not of the two schemes. The harness cannot constrain
-re-synthesis inputs after the crash, so no keys-only protocol can rule out the k′ ≠ k case
-in advance. ∎
+re-synthesis inputs after the crash, so — *when the retry-time derivation actually changes
+across an admissible retry* (the theorem's non-invariance condition) — no keys-only protocol
+can rule out the k′ ≠ k case in advance. ∎
 
 *Scope.* The theorem is silent on keys that are **not** retry-time derivations: durable
 business-operation IDs assigned by the tool or domain and passed through unchanged
@@ -105,7 +108,7 @@ suffice and no new record is needed.
 
 ## 4. Correctness: the WAL protocol guarantees exactly-once
 
-> **Theorem 2a (At-most-once commitment — safety).** Under (A1) atomic idempotent T, (A2) durable L and C, (A3) crash-stop H only, (A4) epoch fencing, (A5) claim discipline, (A6) disjoint effect ownership across concurrent workers, (A7) single recovery writer per crash — for **any** crash time t_c and **any** post-recovery agent behavior, no durable claim identity (per the deployment's id, §1) commits more than one tool effect.
+> **Theorem 2a (At-most-once commitment — safety).** Under (A1) atomic idempotent T, (A2) durable L and C, (A3) crash-stop H only, (A4) epoch fencing, (A5) claim discipline, (A6) disjoint effect ownership across concurrent workers, (A7) single recovery writer per crash — for **any** crash time t_c and **any** post-recovery agent behavior *that assigns the correct logical identity (occurrence) to each attempt*, no durable claim identity (per the deployment's id, §1) commits more than one tool effect. The guarantee is conditional on correct logical-identity assignment: an agent that mislabels the occurrence presents a *new* identity the log cannot link to the original business intent.
 
 **Theorem 2b (Eventual commitment of accepted claims — conditional liveness).** Under (A1)–(A7) plus progress assumptions (P1) T eventually processes every call it accepts, (P2) the harness eventually runs recovery to completion, (P3) fencing epochs are acquired atomically — every CLAIM durably accepted into L is eventually committed by T. Accepted claims are at-least-once; with 2a, exactly-once per claim identity.
 
@@ -118,11 +121,11 @@ suffice and no new record is needed.
 
 - *Case 1 — before CLAIM durable* (t_c < t_claim(s)). No durable trace; recovery treats s as never attempted; a fresh CLAIM with the claim-time key commits it once. Exactly once.
 - *Case 2 — CLAIM durable, call never arrived* (t_c ∈ [t_claim(s), t_call(s))). Reconciliation replays with the original key; T has never seen it → commits. Exactly once.
-- *Case 3 — effect committed, COMMIT not yet durable* (t_c ∈ [t_call(s), t_mark(s))). By (A1) atomicity the effect committed exactly when the call arrived. COMMIT(s) ∉ L. Reconciliation replays with the original key; T finds the key → `duplicate_suppressed`; then COMMIT is written and C advances (log-fenced). Exactly once. (This is the true in-window sub-case.)
-- *Case 4 — COMMIT durable, checkpoint not yet advanced* (t_c ∈ [t_mark(s), t_ckpt(s))). COMMIT(s) ∈ L but C not advanced past s — **the sub-case the previous version mishandled** (it asserted COMMIT(s) ∉ L throughout W(s), but [t_mark, t_ckpt) ⊂ W(s)). Reconciliation finds the CLAIM+COMMIT pair and issues **no replay**; C advances past s (log-fenced). No duplicate, no loss. Exactly once.
+- *Case 3 — effect committed, COMMIT not yet durable* (t_c ∈ [t_call(s), t_mark(s))). (A1) atomicity supplies a linearization point *within* the call's processing, not immediate commitment on arrival: either the atomic check-and-commit has already linearized (effect committed; the replayed key is then found and suppressed) or it has not yet linearized (the replayed key is the first to arrive and commits). In both cases exactly one commit results, because the key is deduplicated atomically at T. COMMIT(s) ∉ L either way. Reconciliation replays with the original key; then COMMIT is written and C advances (log-fenced). Exactly once. (This is the true in-window sub-case.)
+- *Case 4 — COMMIT durable, checkpoint not yet advanced* (t_c ∈ [t_mark(s), t_ckpt(s))). COMMIT(s) ∈ L but C not advanced past s. Reconciliation finds the CLAIM+COMMIT pair and issues **no replay**; C advances past s (log-fenced). No duplicate, no loss. Exactly once.
 - *Case 5 — post-checkpoint* (t_c ≥ t_ckpt(s)). COMMIT(s) ∈ L, C advanced. Reconciliation skips s; the agent resumes after C. Exactly once.
 - *Stale writers.* Any in-flight pre-crash call arriving after recovery bears e < max_epoch → rejected by (A4). No zombie commits. (E4: 102/102 offending calls were this class; 0 same-key recommit attempts succeeded.)
-- *Agent-behavior independence.* Reconciliation uses original keys from L — the agent is **never required to re-derive a key**. Post-recovery steps are checked against L by logical effect identity (Definition, §1) before new claims issue, so reworded/shifted retries of claimed effects are recognized as equivalent and skipped. The argument holds for arbitrary post-recovery behavior, including adversarial re-emission (observed: 11 consecutive re-emissions of committed effects, all suppressed, 0 duplicates over 70 LLM-driven episodes). ∎
+- *Agent-behavior independence (conditional).* Reconciliation uses original keys from L — the agent is **never required to re-derive a key**. Post-recovery steps are checked against L by logical effect identity (Definition, §1) before new claims issue, so reworded/shifted retries of claimed effects are recognized as equivalent and skipped. The argument holds for arbitrary post-recovery behavior *subject to correct logical-identity assignment* — an agent that correctly names the occurrence it intends cannot force a duplicate, whatever it rewords or reorders; an agent that mislabels the occurrence defeats the check, which is the stated boundary, not a protocol failure. Observed: 11 consecutive re-emissions of committed effects, all suppressed, 0 duplicates over 70 LLM-driven episodes. ∎
 
 *Remark (key determinism, sharpened).* The protocol requires keys to be deterministic only **at claim time** (so a pre-crash claim and any same-generation retry coincide). Post-crash *re-derivability* is irrelevant — the log supplies the key. This is the precise point where keys-alone fails and the WAL succeeds, and it is what Theorem 1 formalizes.
 

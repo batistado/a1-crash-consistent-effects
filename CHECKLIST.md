@@ -4,7 +4,12 @@ One file, updated in place. Newest status goes at the top of each section.
 The append-only narrative lives in `RUNLOG.md`. Evidence files (results JSONs,
 reports) are referenced, not duplicated here.
 
-## Current status — 2026-10-07 ~22:20 PDT — Phase 7 QUEUED (third review: one focused revision before TPDS)
+## Current status — 2026-10-08 — Phase 7 COMPLETE (third review addressed, awaiting Mohammed)
+- Third review (2026-10-07): genuinely new 14pp revision confirmed. All 4 remaining items ADDRESSED 2026-10-08: (1) create-or-reuse algorithm + invariant-preservation argument + conditional guarantee + E7 trace/test PASS (2 refunds + retries, 3 commits, invariant audit clean); (2) E2 as combined-design evaluation, E1 kept prominent; (3) proof/scope cleanup (Theorem 1 ending, L7 vs Remark 2, linearization-point Case 3a, previous-version paragraph → response file); (4) reporting/layout fixes (E5 timing, E4 sandbox note, zombie description, Figure 2, Table 1, Khan formal-neighbor citation, TPDS page cap: 12pp regular, up to 18pp with MOPC — 14pp submittable with charges).
+- PDF: 14pp, 0 LaTeX errors, self re-review verified in built PDF. Report: PHASE7_REVIEW_RESPONSE.md. NOT committed/pushed (Mohammed reviews first).
+- Next: Mohammed's review → resubmit decision.
+
+## Previous status — 2026-10-07 ~22:20 PDT — Phase 7 QUEUED (third review: one focused revision before TPDS)
 - Third private review (2026-10-07): genuinely new 14pp revision confirmed; most blockers resolved. Remaining: (1) create-or-reuse algorithm + invariant-preservation argument + conditional guarantee + two-refund trace/test; (2) E2 as combined-design evaluation, E1 kept prominent; (3) proof/scope cleanup (Theorem 1 ending, L7 vs Remark 2, arrived-but-uncommitted, drop "previous version" paragraph); (4) reporting/layout fixes (E5 timing, E4 sandbox note, zombie description, Figure 2, Table 1, formal-neighbor citation, TPDS page cap).
 - Mohammed (voice): Phase 7 authorized on all points; RUNLOG checkpoint + checklist + GitHub push first.
 - Next: Phase 7 agent work → PDF rebuild → resubmit decision.

@@ -275,13 +275,18 @@ commit$\to$checkpoint window. Our claim log is a
 per-harness write-ahead \emph{effect-claim} log paired with
 log-fenced checkpoints and reconciliation-first recovery; where
 LogAct's bus mediates among deconstructed agent roles, our log
-mediates between one crash-prone harness and its tools. A
-formal-methods treatment of the checkpoint crash window exists in
-the distributed-systems literature as an impossibility-style
-result, but without agents, LLMs, tools that keep their own
-records, or a mechanism; we cite it as the closest formal
-neighbor and distinguish our constructive, measured
-contribution.
+mediates between one crash-prone harness and its tools. The closest formal treatment of the checkpoint crash
+window we can identify is Khan's machine-checked conformance
+contract for checkpoint, interrupt, and resume semantics in
+workflow persistence
+layers~\cite{khan2026resume}: a TLA+/TLAPS specification of
+what resume must mean, with independent measurements confirming
+that LangGraph re-executes durably recorded work after real
+process kills---but without agents, LLMs, tools that keep
+their own records, or a mechanism. We cite it as the closest
+formal neighbor and distinguish our constructive, measured
+contribution: Khan specifies the contract; we supply the
+mechanism and the measurement.
 
 \subsection{Durable execution and sagas}
 
@@ -359,7 +364,8 @@ Work & Fault model & Durable records & Identity handling & Receiver assumptions 
 This paper &
 Benign crash-stop, harness-side $W(s)$ &
 Per-harness write-ahead effect-claim log; log-fenced checkpoints &
-Semantic $(\mathit{action},\mathit{target},\mathit{occurrence})$ reconciliation; original keys replayed, never re-derived &
+Semantic $(\mathit{action},\allowbreak\mathit{target},\allowbreak\mathit{occurrence})$;
+original keys replayed, never re-derived &
 Idempotent, atomic check-and-commit; returns \textsc{duplicate\_suppressed} status only on duplicate &
 Epoch fencing vs.\ stale pre-crash writers &
 Exactly-once per durable claim identity (safety); 0 duplicates measured &
@@ -610,11 +616,41 @@ deployment whose identity function is underspecified (L4)---the
 protocol cannot disambiguate what the deployment itself leaves
 ambiguous.
 
+\emph{Claim creation is create-or-reuse.} Before appending a
+\textsc{Claim}, $H$ looks up the full
+$(\mathit{action},\mathit{target},\mathit{occurrence})$ triple
+in $L$. If a durable \textsc{Claim} with that identity exists,
+$H$ reuses its key and issues \emph{no} new claim---this is the
+path a post-crash retry takes. Otherwise $H$ mints a
+previously-unused key, appends the \textsc{Claim} durably, and
+only then invokes the tool. The lookup-then-append ordering is
+what preserves Definition~3's invariant across crashes: a crash
+between the lookup and the append can leave at most a durable
+claim whose key a later attempt will \emph{reuse}---never two
+keys bound to one identity---because claim discipline forbids
+any tool call without a durable claim, so a key that never
+reached $L$ could never have reached $T$. The occurrence
+counter is a pure function of the durable claims (the count of
+claims for the $(\mathit{action},\mathit{target})$ pair), so no
+separate counter state exists to desynchronize across a crash.
+A scripted trace exercises this end to end
+(\texttt{results\_e7\_refunds.json}): two separately
+authorized refunds to the same target commit (2 commits, 2
+distinct keys); a crash follows; retries of each refund hit
+the reuse path and are suppressed (0 new commits); a third
+authorized refund commits as a new identity (3 commits total).
+The invariant audit confirms one key per identity and distinct
+keys per distinct identity.
+
 \subsection{Normal and recovery paths}
 
 \emph{Normal path} for an effectful step $s$:
 \begin{enumerate}[nosep]
-\item $H$ appends $\textsc{Claim}(s)$ to $L$ (\emph{write-ahead}).
+\item $H$ runs create-or-reuse: look up
+$(\mathit{action},\mathit{target},\mathit{occurrence})$ in $L$;
+reuse the existing key if a \textsc{Claim} is durable, else
+mint a fresh key and append $\textsc{Claim}(s)$ to $L$
+(\emph{write-ahead}).
 \item $H$ invokes $T.\mathrm{call}(k(s), \mathit{epoch},
 \mathit{args})$.
 \item $H$ appends $\textsc{Commit}(s)$ to $L$, then advances $C$
@@ -704,11 +740,11 @@ concurrently claiming the same $(\mathit{action}, \mathit{target},
 \node[db,below=of l] (c) {Checkpoint $C$\\(log-fenced)};
 \node[box,right=of l] (t) {Tool $T$\\(idempotent\\receiver)};
 \draw[->] (h) -- node[font=\scriptsize,above,pos=0.3] {1: \textsc{Claim}} (l);
-\draw[->] (h.east) -- node[font=\scriptsize,below,pos=0.5] {2: call($k$, epoch)} (t.west);
-\draw[->] (h) -- node[font=\scriptsize,below,pos=0.7] {3: \textsc{Commit}} (l);
+\draw[->] (h.east) -- node[font=\scriptsize,above,pos=0.62] {2: call($k$, epoch)} (t.west);
+\draw[->] (h) -- node[font=\scriptsize,below,pos=0.78] {3: \textsc{Commit}} (l);
 \draw[->] (l) -- node[font=\scriptsize,right] {fenced} (c);
 \draw[->,dashed,red] (l.east) -- ++(0.9,0) |- node[font=\scriptsize,
-  near start,right] {reconcile-first} (t.east);
+  above,near start] {reconcile-first} (t.east);
 \node[font=\scriptsize,red,below=0.15cm of t] {stale epochs rejected};
 \end{tikzpicture}
 \caption{Protocol architecture. The harness claims before
@@ -796,8 +832,10 @@ failure modes, reported separately.
 The failure is a property of the \emph{class}---retry-time
 derivations whose outputs actually change across an admissible
 replan---not of the two schemes. The harness cannot constrain
-re-synthesis inputs after the crash, so no keys-only protocol
-can rule out the $k' \ne k$ case in advance.
+re-synthesis inputs after the crash, so---\emph{when the
+retry-time derivation actually changes across an admissible
+retry} (the theorem's non-invariance condition)---no keys-only
+protocol can rule out the $k' \ne k$ case in advance.
 \end{proof}
 
 \begin{remark}[Scope]
@@ -887,8 +925,15 @@ discipline, (A6) disjoint effect ownership across concurrent
 workers (two workers never concurrently claim the same logical
 identity), and (A7) a single recovery writer per crash---for
 \textbf{any} crash time $t_c$ and \textbf{any} post-recovery
-agent behavior, no durable claim identity (per the deployment's
-$\mathit{id}$) commits more than one tool effect.
+agent behavior \emph{that assigns the correct logical identity
+(occurrence) to each attempt}, no durable claim identity (per
+the deployment's $\mathit{id}$) commits more than one tool
+effect. The guarantee is conditional on correct
+logical-identity assignment: an agent that mislabels the
+occurrence (calling the original refund ``occurrence~1''
+instead of ``occurrence~0'') presents a \emph{new} identity the
+log cannot link to the original business intent, and logging
+alone cannot recognize the duplicate intent (Definition~2).
 \end{theorem}
 
 \begin{theorem}[Eventual commitment of accepted claims]
@@ -922,11 +967,15 @@ a fresh \textsc{Claim} with the claim-time key commits it once.
 reconciliation replays with the original key; $T$ has never seen
 it and commits. \emph{Case 3---call dispatched, \textsc{Commit} not yet durable}
 ($t_c \in [t_{\mathrm{call}}(s), t_{\mathrm{mark}}(s))$): two
-sub-cases. (3a)~The call \emph{arrived} at $T$: by (A1)
-atomicity the effect committed exactly on arrival, but
-$\textsc{Commit}(s) \notin L$. Reconciliation replays with the
-original key; $T$ finds the key and suppresses the duplicate;
-then \textsc{Commit} is written and $C$ advances (log-fenced).
+sub-cases. (3a)~The call \emph{arrived} at $T$: (A1)
+atomicity supplies a linearization point \emph{within} the
+call's processing, not immediate commitment on arrival. Either
+the atomic check-and-commit has already linearized (effect
+committed; the replayed key is then found and suppressed) or it
+has not yet linearized (the replayed key is the first to arrive
+and commits). In both cases exactly one commit results, because
+the key is deduplicated atomically at $T$; then
+\textsc{Commit} is written and $C$ advances (log-fenced).
 (3b)~The call was \emph{dispatched but not yet arrived}
 (in-flight on the wire when $H$ died): $T$ has never seen the
 key. Reconciliation replays with the original key and $T$
@@ -937,13 +986,7 @@ advanced} ($t_c \in [t_{\mathrm{mark}}(s),
 t_{\mathrm{ckpt}}(s))$): $\textsc{Commit}(s) \in L$ but $C$ not
 advanced past $s$. Reconciliation finds the
 \textsc{Claim}+\textsc{Commit} pair and issues \emph{no replay};
-$C$ advances past $s$. No duplicate, no loss. (The previous
-version asserted $\textsc{Commit}(s) \notin L$ throughout $W(s)$;
-since $t_{\mathrm{mark}} < t_{\mathrm{ckpt}}$, the sub-interval
-$[t_{\mathrm{mark}}, t_{\mathrm{ckpt}}) \subset W(s)$ already has
-the \textsc{Commit} durable. The old conclusion held---the
-receiver suppresses by key either way---but the case analysis
-was unsound as written; this split repairs it.)
+$C$ advances past $s$. No duplicate, no loss.
 \emph{Case 5---post-checkpoint} ($t_c \ge t_{\mathrm{ckpt}}(s)$):
 $\textsc{Commit}(s) \in L$ and $C$ advanced; reconciliation
 skips $s$ and the agent resumes after $C$. \emph{Stale writers:}
@@ -951,15 +994,19 @@ any in-flight pre-crash call arriving after recovery bears
 $e < \mathit{max\_epoch}$ and is rejected by (A4); no zombie
 commits (E4: 102/102 offending calls were this class; 0
 same-key recommit attempts succeeded).
-\emph{Agent-behavior independence:} reconciliation uses original
+\emph{Agent-behavior independence (conditional):} reconciliation uses original
 keys from $L$---the agent never re-derives a key---and
 post-recovery steps are checked against $L$ by logical effect
 identity before new claims issue, so reworded or shifted
 retries of claimed effects are recognized as equivalent and
 skipped. The argument holds for arbitrary post-recovery
-behavior, including adversarial re-emission (observed: 11
-consecutive re-emissions of committed effects, all suppressed,
-0 duplicates over 70 LLM-driven episodes).
+behavior \emph{subject to correct logical-identity
+assignment}: an agent that correctly names the occurrence it
+intends cannot force a duplicate, whatever it rewords or
+reorders; an agent that mislabels the occurrence defeats the
+check, which is the stated boundary, not a protocol failure.
+Observed: 11 consecutive re-emissions of committed effects,
+all suppressed, 0 duplicates over 70 LLM-driven episodes.
 \end{proof}
 
 \begin{proof}[Proof sketch for eventual commitment]
@@ -1005,13 +1052,17 @@ validation because the harness \emph{refuses} tool calls without
 valid claims---violations degrade to refused calls (missing,
 never duplicates).
 
-\textbf{(L7) Mechanism vs.\ information.} The theorems establish
-necessity of \emph{durable write-ahead identity information},
-not uniqueness of the append-only log schema. A durable
-operation table (identity $\to$ status) written before each
-tool call would satisfy the same requirement; our claim log is
-the evaluated sufficient mechanism. Necessity claims in this
-paper refer to the information, never the schema.
+\textbf{(L7) Mechanism vs.\ information.} Under the
+recovery-information model of \S\ref{sec:formal} (Remark~2),
+the theorems establish the necessity of \emph{durable
+write-ahead identity information}---not uniqueness of the
+append-only log schema. A durable operation table (identity
+$\to$ status) written before each tool call would satisfy the
+same requirement; our claim log is the evaluated sufficient
+mechanism. Necessity claims in this paper refer to the
+information \emph{under that model}, never the schema, and
+never universally---consistent with Remark~2's scoped modeling
+claim.
 
 \section{Evaluation}
 \label{sec:eval}
@@ -1281,8 +1332,10 @@ boundary experiments: for each, the baseline condition, the
 identity/key rule under test, the injected fault, and the
 measured duplicate, missing-effect, and completion counts.
 All use the v2 LangGraph harness with real \texttt{SIGKILL}
-unless noted; scoring is against the tool server's append-only
-ledger (ground truth), independent of the harness.
+unless noted---E4 is the noted exception, a sandbox re-run of
+the \texttt{no\_fencing} condition rather than the v2 harness;
+scoring is against the tool server's append-only ledger
+(ground truth), independent of the harness.
 
 \begin{table*}[t]
 \centering
@@ -1306,7 +1359,7 @@ E2b & det\_content & content-hash keys $H(\mathit{action}, \mathit{args})$; reco
 E2b & wal & claim-log identities; canonicalized lookup & same & 60 & 0 & 0.00 & 60/60 \\
 E3 & wal & claim log & fan-out $\in\{2,4,8\}$; log-length $\{10^2,10^3,10^4\}$; concurrency $K\in\{1,4,16\}$ & 90+ & 0 & 0.00 & all \\
 E4 & no\_fencing & claim log kept, epoch fencing removed & zombie writer (surviving pre-crash process, stale epoch) & 200 & 102 & --- & --- \\
-E5 & wal/det/native & paired seed-matched episodes & none (timing only) & 60 & 0 & 0.00 & 60/60 \\
+E5 & wal/det/native & paired seed-matched episodes & none (paired timing; episodes include crash + recovery) & 60 & 0 & 0.00 & 60/60 \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -1345,7 +1398,13 @@ replays the \emph{original} key, never re-deriving. Result:
 duplicates and 0.77 missing effects per episode (collision and
 re-derivation modes); \texttt{det\_content} 46/60 duplicate
 episodes with 92 excess commits and 0 missing; WAL 60/60 in
-both.
+both. E2 evaluates the \emph{combined} design---canonicalized
+identity lookup plus durable key reuse---against hashing
+mutable text; it does not isolate the marginal contribution of
+the log itself, and we do not attribute the entire gap to the
+log alone. The E1 result (native persistence ties the WAL at
+60/60) remains the boundary: where stable identities survive
+recovery, keys alone suffice and no new record is needed.
 
 \emph{E4: fencing trace.} A 200-episode re-run of the sandbox
 \texttt{no\_fencing} condition (claim log kept, epoch fencing
@@ -1359,7 +1418,8 @@ generation commits \texttt{send\_email} to
 \texttt{det:wf-0776\ldots:3:send\_email} at epoch~0; the
 recovery generation replays the same key at epoch~1 and is
 correctly suppressed (\texttt{duplicate\_suppressed}); the
-surviving zombie---killed mid-fan-out, never observing the
+surviving zombie---the pre-crash instance, never killed
+mid-fan-out and never observing the
 fence bump---retries the same semantic effect with a fresh
 content-hash key \texttt{ch:33428fa0\ldots} at stale epoch~0,
 which the receiver accepts because the key is unseen. The
@@ -1376,7 +1436,12 @@ the identical workflow under all three conditions (pairing
 verified: 0/60 plan-seed mismatches). Per-episode wall-clock
 \texttt{elapsed\_s}; reported intervals are 95\% confidence
 intervals on the \emph{paired differences}
-(mean $\pm$ 1.96$\times$SE, $n{=}20$). End-to-end: wal vs.\
+(mean $\pm$ 1.96$\times$SE, $n{=}20$). Each episode includes an
+in-window crash and full recovery: end-to-end is wall clock
+from crash through recovery completion, while the recovery row
+is the instrumented recovery-subprocess interval (reconciliation
+start through checkpoint advance) within the same episodes.
+End-to-end: wal vs.\
 deterministic $+$0.38\,s (95\% CI $[-$0.08, $+$0.83]);
 wal vs.\ native $-$1.92\,s (95\% CI $[-$2.96, $-$0.88]).
 The wal--deterministic interval \emph{includes zero and extends
@@ -1411,10 +1476,15 @@ but other frameworks are untested.
 Every protocol piece must earn its place. A 1,500
 episodes/condition component ablation adds a second,
 \emph{explicitly separate} fault model---the \emph{zombie
-writer}: with probability 0.5, the pre-crash process
-\emph{survives} its kill signal and retries its in-flight step
-with a stale epoch after recovery. This is overlapping
-generations, not the crash-stop fault of
+writer}: with probability 0.5, the pre-crash process instance
+is \emph{not} killed. It survives into the post-recovery
+generation and retries its in-flight step with its stale
+epoch, re-deriving the call the way a stale at-least-once
+agent would---a fresh content-hash key over its (possibly
+reworded) arguments, i.e., a key from a keyspace the new
+generation never saw. The tool's idempotent receiver cannot
+suppress it (unseen key); only the epoch fence rejects it.
+This is overlapping generations, not the crash-stop fault of
 \S\ref{sec:formal} (where the killed process is gone); we
 evaluate it separately because production kills are not always
 clean and the fencing mechanism exists precisely for the
