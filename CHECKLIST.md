@@ -4,7 +4,12 @@ One file, updated in place. Newest status goes at the top of each section.
 The append-only narrative lives in `RUNLOG.md`. Evidence files (results JSONs,
 reports) are referenced, not duplicated here.
 
-## Current status — 2026-10-07 ~21:05 PDT — Phase 6 COMPLETE (second review addressed, awaiting Mohammed)
+## Current status — 2026-10-07 ~22:20 PDT — Phase 7 QUEUED (third review: one focused revision before TPDS)
+- Third private review (2026-10-07): genuinely new 14pp revision confirmed; most blockers resolved. Remaining: (1) create-or-reuse algorithm + invariant-preservation argument + conditional guarantee + two-refund trace/test; (2) E2 as combined-design evaluation, E1 kept prominent; (3) proof/scope cleanup (Theorem 1 ending, L7 vs Remark 2, arrived-but-uncommitted, drop "previous version" paragraph); (4) reporting/layout fixes (E5 timing, E4 sandbox note, zombie description, Figure 2, Table 1, formal-neighbor citation, TPDS page cap).
+- Mohammed (voice): Phase 7 authorized on all points; RUNLOG checkpoint + checklist + GitHub push first.
+- Next: Phase 7 agent work → PDF rebuild → resubmit decision.
+
+## Previous status — 2026-10-07 ~21:05 PDT — Phase 6 COMPLETE (second review addressed, awaiting Mohammed)
 - Second private review (2026-10-07): meaningful improvement, HOLD submission. All 3 blockers ADDRESSED 2026-10-08: (1) Theorem 1 non-invariance condition + E2a/E2b reframed as distinct failure modes + necessity heading REMOVED (scoped remark); (2) (action,target,occurrence) unified across Algorithm 1/Table 2/L4/theorems + key↔identity invariant + (A6)/(A7) + E6 tests 3/3 PASS; (3) §6.5 methods subsection + Table 8, E4 trace, honest E5 interval + CI method, related-work fixes (LogAct/Temporal/LIMBO), all PDF fixes. PDF: 14pp, 0 errors. Report: PHASE6_REVIEW_RESPONSE.md. NOT committed/pushed (Mohammed reviews first).
 - Next: Mohammed's review → resubmit decision.
 
