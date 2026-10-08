@@ -390,3 +390,35 @@ spend, verdict. Newest at the bottom. Times in PDT unless noted.
 - K=1: 689 ops/s, p50 1.3ms, p99 2.4ms. K=4: 636 ops/s, p50 5.4ms, p99 15.9ms. K=16: 310 ops/s, p50 11.2ms, p99 1055ms.
 - Verdict: PASS with caveat. Server handles low concurrency (K<=4) with modest degradation; at K=16 throughput halves and p99 explodes (single-threaded HTTP server + file I/O serialization). Production needs a concurrent server; experimental scale unaffected.
 - Output: results_e3c_k1/k4/k16.json. Driver: langgraph_port/e3c_loadtest.py. $0.
+
+## 2026-10-07 ~19:45 PDT — A1 Phase 3 protocol-spec draft COMPLETE ($0)
+- Drafted PHASE3_REVISIONS.md from the implementation (claim_log.py, tool_server.py, file_tool.py, checkpoint_store.py, common.py, agent_graph_v2.py recover/w_claim/dispatch/worker_sub nodes, agent_graph.py v1). No manuscript or source edits (sibling agents on Phases 1–2; no code changes without approval). No commit/push.
+- 3.1 Epochs: fresh writes epoch 0 (atomic_write_json); recovery does read+1 → atomic local write → POST /fence (server max-monotonic, durable epochs.json) → FileTool.set_epoch. Local write precedes fence POST (crash between = safe, wasteful). HONEST GAP: read-increment-write not atomic across concurrent recoveries — relies on crash-stop + single-recovery-writer; spec fix = CAS at the tool server (durable arbiter).
+- 3.2 Duplicate result return: server/file tool return status-only `duplicate_suppressed` (no result payload); harness propagates status only. HONEST GAP: original results not returned; spec fix = result-carrying suppressions + harness result cache.
+- 3.3 Partial JSONL: per-record open/write/fsync/close; load() skips torn tail, raises on torn non-tail. Torn Commit is safe (replay + idempotent suppression). HONEST GAPS: torn-tail skip is silent (add counter); no per-record checksums (don't overclaim).
+- 3.4 Parallel: Send fan-out, fan-in via branch_results reducer (full state NOT returned — InvalidUpdateError avoidance); per-branch atomic done-files (no RMW race); log-fenced frontier recomputation (branch settled iff ALL effects committed; gaps legal). HONEST GAP: concurrent equivalent claims not serialized — check-then-append on identity has no lock, receiver dedups by key not identity; harness avoids it via disjoint ownership; spec fix = claim CAS on identity or identity-aware receiver dedup.
+- Deliverable: self-contained spec (Part A) + exact old→new manuscript replacements (Part B) + gap register (Part C, 5 gaps with code locations and specified fixes).
+- Spend: $0 (code reading + writing only). Verdict: PASS — spec complete and honest; ready for merge with Phases 1–2.
+
+## 2026-10-08 ~00:00 UTC — A1 Phase 2 theory-repair drafts complete (2.1–2.5)
+- Wrote PHASE2_REVISIONS.md (drafts only; FORMAL_MODEL.md and manuscript/main.tex NOT touched — Phases 1/3 siblings working in parallel).
+- 2.1: Theorem 1 narrowed to retry-time derivations from mutable inputs ("Retry-time key fragility"); explicit scope remark excluding externally supplied stable business-op IDs; E2a (46/60 dup eps, 46 missing) and E2b (46/60 dup eps, 92 excess commits) as empirical witnesses; v2/E1 stable-identity ties as the boundary illustration; intro contribution + discussion paragraph replacements drafted.
+- 2.2: recommends downgrading "log necessary" → "durable write-ahead identity record necessary; append-only log sufficient mechanism". FLAGGED NEEDS-MOHAMMED-DECISION: (a) keep strong necessity claim [not recommended — reviewer's op-table counterexample is valid] vs (b) adopt information-necessity/mechanism-sufficiency framing [recommended]. Drafts assume (b).
+- 2.3: logical effect identity defined (stability/discrimination/retry-equivalence; id=(action,target,occurrence); misidentification breaks both directions; deployment modeling assumption).
+- 2.4: Theorem 2 split into 2a at-most-once (safety), 2b eventual commitment of accepted claims under P1–P3 (conditional liveness), 2c workflow completion policy-dependent (66/70 = empirical rate, not liveness proof; 0 dups on all 70).
+- 2.5: proof case analysis repaired — six cases split at every durability boundary; fixes the unsound assertion that COMMIT(s) ∉ L throughout W(s) (the [t_mark,t_ckpt) sub-interval has COMMIT durable); old conclusion preserved, reasoning now sound.
+- Spend: $0 (writing only). Next: Mohammed resolves 2.2, then Phase 5 applies drafts in manuscript rewrite.
+
+## 2026-10-07 ~20:00 PDT — A1 Phase 1 revisions DRAFTED (writing/related-work/reporting, items 1.1–1.10)
+- **What:** Drafted all Phase 1 revisions as exact old-text → new-text replacements in PHASE1_REVISIONS.md (manuscript/main.tex NOT edited — sibling agents drafting Phases 2/3 in parallel).
+- **1.1 LogAct:** corrected — LogAct DOES discuss crash recovery via AgentBus-as-WAL + old-driver fencing (verified arXiv:2604.07988); distinction re-grounded in shared-bus vs per-harness-claim-log.
+- **1.2 ACRFence/LIMBO:** ACRFence overlap acknowledged (records irreversible tool effects; differs in threat model + mechanism); LIMBO 4% attribution narrowed (service-boundary residual, not explained by our theorem); prose rename LIMBO→Li recommended (Limbo is the sandbox).
+- **1.3 Citations added:** RIFL (Lee et al., SOSP'15, verified), ARIES (Mohan et al., TODS 1992, verified), Sagas (Garcia-Molina & Salem, SIGMOD'87, verified); RIFL positioned as receiver-side analogue with stated limit.
+- **1.4 Bib fixes:** corrected titles/authors for [limbo2026] (Jiapeng Li, "Where Does Exactly-Once Live?..."), [acrfence2026] (Zheng/Yang/Zhang/Quinn, "Preventing Semantic Rollback Attacks..."), [agentrewind2026] (Zhuang et al., "Recoverable Execution..."), [safutoresume2026] (Wu et al.); all verified via arXiv. Keys kept stable.
+- **1.5 Comparison table:** drafted full LaTeX table* (fault model × durable records × identity × receiver × fencing × guarantee × evaluation) across 10 works.
+- **1.6 Safety/completion split:** drafted for abstract, contributions(2), conclusion, §6 intro — safety (0 dups, every campaign) vs completion (1.000 except gpt-4o-mini loose 66/70, prompt-fixable).
+- **1.7 Counts:** 140 = two-model (70+70); 210 = +tight-prompt 70 (verified JSONs); 214 decisions = 180 eps + 34 dual-generation (verified decisions.jsonl); duplicate-rate denominators defined; 20.3ms defined as per-step fsync'd write-path latency; **API spend corrected: "under $0.10" → $0.1137** (verified).
+- **1.8 Uncertainty:** 0/60 → 4.87%, 0/1,500 → 0.20% (one-sided exact 95%) added to three table captions.
+- **1.9 Algorithm:** "step~4" → "line~7" (verified); float-specifier warning fix; PDF visual pass flagged for stranded headings.
+- **1.10 Overhead:** "~1% tax" replaced with measured numbers (E2b p50 21.5/p99 62.7ms; E3b append O(1) ~0.03ms, find O(n) 850ms@10k; E3c 688/636/310 ops/s, p99 1055ms@K=16); **honest gap flagged: paired end-to-end latency + recovery time were never measured** — recommend small paired-timing run or Limitations entry.
+- **Spend:** $0 (writing + web verification only). **Verdict:** DRAFT COMPLETE — ready for merge review after Phases 2/3 land. Not committed/pushed per instructions.
