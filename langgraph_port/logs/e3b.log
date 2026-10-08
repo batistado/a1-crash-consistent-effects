@@ -1,0 +1,4 @@
+N=   100 append p50=0.072ms p99=13.841ms max=13.841ms | find(hit) p50=0.581ms | find(miss) p50=8.094ms | scan p50=0.608ms | log=0.01MB
+N=  1000 append p50=0.035ms p99=8.953ms max=69.917ms | find(hit) p50=32.989ms | find(miss) p50=30.817ms | scan p50=31.657ms | log=0.14MB
+N= 10000 append p50=0.028ms p99=7.089ms max=33.150ms | find(hit) p50=372.731ms | find(miss) p50=380.243ms | scan p50=424.370ms | log=1.39MB
+wrote /home/hatch/workspace/orx-projects/a1-crash-consistent-effects/results_e3_scale.json

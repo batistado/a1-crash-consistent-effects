@@ -423,16 +423,18 @@ def esc_claim_node(state):
     key, skip = None, False
     if state["condition"] == "wal":
         log = ClaimLog(os.path.join(state["run_dir"], "claim.log"))
-        existing = log.find_by_identity(eff["action"], eff["target"])
+        existing = log.find_by_identity(eff["action"], eff["target"],
+                                          eff.get("occurrence", 0))
         if existing is not None:
             key = existing["key"]
             skip = log.is_committed(existing)
         else:
             key = claim_key_v2(state["workflow_id"], 1, "esc", 0,
                                eff["action"])
+            occ = log.next_occurrence(eff["action"], eff["target"])
             t0 = time.perf_counter()
             log.append_claim("esc", eff["action"], eff["target"], "v2 esc",
-                             key, state["epoch"])
+                             key, state["epoch"], occurrence=occ)
             CLAIM_TIMINGS.append(("claim", time.perf_counter() - t0))
     elif state["condition"] in ("deterministic", "native"):
         key = claim_key_v2(state["workflow_id"], 1, "esc", 0, eff["action"])
@@ -484,7 +486,8 @@ def w_claim_node(state):
         # canonical_target_v2 is a no-op for non-reworded targets.
         lookup_target = (canonical_target_v2(target)
                          if state.get("reword_recovery") else target)
-        existing = log.find_by_identity(action, lookup_target)
+        existing = log.find_by_identity(action, lookup_target,
+                                          eff.get("occurrence", 0))
         if existing is not None:
             # Never re-derive: reuse the durable key. Committed -> skip the
             # effect entirely; uncommitted (should not survive recovery, but
@@ -494,9 +497,10 @@ def w_claim_node(state):
         else:
             key = claim_key_v2(wid, state["round"], state["branch"],
                                state["idx"], action)
+            occ = log.next_occurrence(action, target)
             t0 = time.perf_counter()
             log.append_claim(uid, action, target, f"v2 {uid}", key,
-                             state["epoch"])
+                             state["epoch"], occurrence=occ)
             CLAIM_TIMINGS.append(("claim", time.perf_counter() - t0))
     elif cond in ("deterministic", "native"):
         # native: same durable operation identities as deterministic; the

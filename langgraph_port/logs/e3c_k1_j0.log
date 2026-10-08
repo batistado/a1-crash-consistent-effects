@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "/home/hatch/workspace/orx-projects/a1-crash-consistent-effects/langgraph_port/crash_harness_v2.py", line 573, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/home/hatch/workspace/orx-projects/a1-crash-consistent-effects/langgraph_port/crash_harness_v2.py", line 439, in main
+    server_proc, server_url = start_server(
+                              ^^^^^^^^^^^^^
+  File "/home/hatch/workspace/orx-projects/a1-crash-consistent-effects/langgraph_port/crash_harness_v2.py", line 67, in start_server
+    raise RuntimeError("A1_REUSE_SERVER=1 but no shared server is up")
+RuntimeError: A1_REUSE_SERVER=1 but no shared server is up

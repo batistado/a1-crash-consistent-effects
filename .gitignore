@@ -1,0 +1,7 @@
+langgraph_port/.venv/
+__pycache__/
+langgraph_port/runs/
+manuscript/*.aux
+manuscript/*.log
+manuscript/*.out
+manuscript/a1_manuscript_backup/

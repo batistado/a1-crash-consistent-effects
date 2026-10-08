@@ -33,7 +33,11 @@ Default instantiation: id = (action, target, occurrence), where *occurrence* dis
 1. `epoch ← epoch + 1`; register with T (fence acquisition).
 2. *Reconcile-first:* for each `CLAIM(s)` without a matching `COMMIT` in L, re-invoke `T.call` with the claim's **original** key and the new epoch. T's idempotent receiver dedups if the pre-crash call committed, executes if it never arrived. Mark `COMMIT` on success.
 3. Advance C past all COMMITted claims (log-fenced).
-4. Resume the agent from C. Post-recovery steps are checked against L by *semantic claim identity* `(action, target)` before any new claim is issued: reworded or re-indexed retries of already-claimed effects are skipped, not re-executed.
+4. Resume the agent from C. Post-recovery steps are checked against L by *semantic claim identity* `(action, target, occurrence)` (Definition, §1) before any new claim is issued: reworded or re-indexed retries of already-claimed effects are skipped, not re-executed; legitimately distinct effects sharing an action and target (different occurrence) still execute.
+
+**Key–identity invariant (explicit).** The protocol maintains: (i) every logical identity has exactly one durable key, fixed in its CLAIM record; (ii) all equivalent attempts of that identity reuse that key (reconciliation replays the original key from L; the skip lookup matches on the full (action, target, occurrence) triple); (iii) distinct accepted identities receive distinct keys. The receiver deduplicates by *key*; the theorems guarantee uniqueness by *logical identity*; this invariant connects the two — a duplicate key implies an equivalent attempt, and a distinct identity implies a distinct key.
+
+**Scope restrictions (in the theorem assumptions).** (A6) Disjoint effect ownership across concurrent workers: two workers never concurrently claim the same logical identity (concurrent claims of the same identity are not serialized by the log). (A7) Single recovery writer per crash: epoch acquisition is atomic only via T's max-monotonic fence; two concurrent recoveries could share an epoch (see §5, L5).
 
 ## 2. Fault model
 
@@ -53,27 +57,31 @@ Benign crash faults only (chaos/HPC checkpoint-restart tradition); no Byzantine 
 
 ## 3. Necessity: keys alone cannot suffice
 
-> **Theorem 1 (Retry-time key fragility).** Let K be an idempotency-key derivation computed by the *recovered* agent at retry time from retry-time inputs that are *mutable under re-synthesis* — argument text the agent may reword, or plan positions the recovery replan may shift. If post-recovery re-synthesis is unconstrained over those inputs, then a keys-only retry protocol cannot guarantee duplicate suppression across all admissible recovery replans under in-window crashes.
+> **Theorem 1 (Retry-time key fragility).** Let K be an idempotency-key derivation computed by the *recovered* agent at retry time. If two admissible attempts of the *same* logical effect produce *different* keys k ≠ k′ — because the derivation reads inputs that are mutable under re-synthesis (rewordable argument text, shiftable plan positions) *and* the recovery replan actually changes them — and neither key was previously used for another operation, then an atomic receiver that deduplicates only by key can commit both attempts. A keys-only retry protocol therefore cannot guarantee duplicate suppression across all admissible recovery replans under in-window crashes.
 
-*Proof sketch.* Fix a step s committed in-window under k = K(pre-crash inputs). Two admissible
-recoveries inside the mutable-input class:
+*Proof sketch.* Fix a step s committed in-window under k = K(pre-crash inputs). The non-invariance condition is load-bearing: mutable inputs alone do not break a derivation — a derivation that canonicalizes reworded text or ignores plan positions never satisfies k′ ≠ k and is outside the theorem. Two admissible recoveries exhibit the two failure modes when the derivation *does* change:
 
 (i) *Content-hash keys*, K = H(action, args): the recovered agent rewords the arguments to
 a′ ≠ a (admissible). The retry presents k′ = H(action, a′) ≠ k. T has never seen k′ → commits
 again → **duplicate**. *Empirical witness (E2b):* recovery-side target rewording broke
-deterministic content-hash keys on 46/60 episodes (92 excess commits, 14/60 exactly-once);
-the WAL held 60/60 via canonicalized identity lookup.
+deterministic content-hash keys on 46/60 episodes (92 excess commits, 0 missing effects,
+14/60 exactly-once); the WAL held 60/60 via canonicalized identity lookup. E2b is the
+pure re-derivation→duplication witness.
 
 (ii) *Deterministic position keys*, K = (wid, i, action): the recovered agent rotates branch
 indices on replan (admissible). The retried logical step carries i′ ≠ i, so the retry presents
-k′ = (wid, i′, action) ≠ k → **duplicate**; symmetrically, a shifted retry whose new key
-collides with an already-committed key is wrongly suppressed → **lost effect**. *Empirical
-witness (E2a):* positional shift broke deterministic keys on 46/60 episodes with 46 missing
-effects (14/60 exactly-once); the WAL held 60/60 via `find_by_identity` key reuse.
+k′ = (wid, i′, action) ≠ k → **duplicate**; separately, a shifted retry whose new key
+collides with an already-committed key of a *different* operation is wrongly suppressed →
+**lost effect** (erroneous suppression, not a duplicate). *Empirical witness (E2a):*
+positional shift broke deterministic keys on 46/60 episodes with 0.77 duplicates and
+0.77 missing effects per episode (14/60 exactly-once); the WAL held 60/60 via
+`find_by_identity` key reuse. E2a is the collision→omission witness (with accompanying
+duplicates) — a different failure mode from E2b, reported separately.
 
-The failure is a property of the *class* — retry-time derivations from mutable inputs — not of
-the two schemes: any K in the class admits an admissible recovery with K′ ≠ K, because the
-harness cannot constrain re-synthesis inputs after the crash. ∎
+The failure is a property of the *class* — retry-time derivations whose outputs actually
+change across an admissible replan — not of the two schemes. The harness cannot constrain
+re-synthesis inputs after the crash, so no keys-only protocol can rule out the k′ ≠ k case
+in advance. ∎
 
 *Scope.* The theorem is silent on keys that are **not** retry-time derivations: durable
 business-operation IDs assigned by the tool or domain and passed through unchanged
@@ -83,15 +91,23 @@ under stable identities, deterministic keys tie the WAL (v2 LangGraph: 0.0000/1.
 E1 native persistence: 60/60); under identity shift they fail (E2a/E2b). The theorem
 characterizes the failure side of that boundary.
 
-*Corollary (durable identity information).* The source of truth for effect identity must be fixed **before** the crash — a durable write-ahead identity record binding the effect's logical identity to its key — not re-derived after it. The *information* (a durable pre-commit identity record) is necessary; the append-only claim log is our sufficient mechanism (see 2.2).
+*Scoped remark (durable identity information — not a universal necessity theorem).* Within
+the recovery-information model of §2–§3 — where the recovered agent may re-synthesize any
+retry-time input and no durable business identifier survives the crash outside the harness's
+own records — the source of truth for effect identity must be fixed **before** the crash:
+a durable write-ahead identity record binding the effect's logical identity to its key,
+not re-derived after it. The *information* (a durable pre-commit identity record) is the
+necessary ingredient *under this model*; the append-only claim log is our sufficient
+mechanism (see L7). Where a stable domain identifier survives recovery (E1), keys alone
+suffice and no new record is needed.
 
 *Empirical counterpart.* Scripted sandbox, 1,500 episodes/condition, in-window crash fraction 0.75: duplicate-effect rates — baseline (no keys) 0.769, content-hash keys 0.367, deterministic keys 0.211, write-ahead claim log **0.000**. LangGraph production port with real SIGKILL: under *stable* identities deterministic keys tie the WAL (0.0000/1.0000, both; E1 native persistence likewise 60/60) — keys suffice there. Under *identity shift across recovery* (E2a positional, E2b content rewording), deterministic keys break on 46/60 episodes each while the WAL holds 60/60. The measured gap is the price of re-derivation fragility, paid exactly where Theorem 1 says it is due.
 
 ## 4. Correctness: the WAL protocol guarantees exactly-once
 
-> **Theorem 2a (At-most-once commitment — safety).** Under (A1) atomic idempotent T, (A2) durable L and C, (A3) crash-stop H only, (A4) epoch fencing, (A5) claim discipline — for **any** crash time t_c and **any** post-recovery agent behavior, no durable claim identity (per the deployment's id, §1) commits more than one tool effect.
+> **Theorem 2a (At-most-once commitment — safety).** Under (A1) atomic idempotent T, (A2) durable L and C, (A3) crash-stop H only, (A4) epoch fencing, (A5) claim discipline, (A6) disjoint effect ownership across concurrent workers, (A7) single recovery writer per crash — for **any** crash time t_c and **any** post-recovery agent behavior, no durable claim identity (per the deployment's id, §1) commits more than one tool effect.
 
-**Theorem 2b (Eventual commitment of accepted claims — conditional liveness).** Under (A1)–(A5) plus progress assumptions (P1) T eventually processes every call it accepts, (P2) the harness eventually runs recovery to completion, (P3) fencing epochs are acquired atomically — every CLAIM durably accepted into L is eventually committed by T. Accepted claims are at-least-once; with 2a, exactly-once per claim identity.
+**Theorem 2b (Eventual commitment of accepted claims — conditional liveness).** Under (A1)–(A7) plus progress assumptions (P1) T eventually processes every call it accepts, (P2) the harness eventually runs recovery to completion, (P3) fencing epochs are acquired atomically — every CLAIM durably accepted into L is eventually committed by T. Accepted claims are at-least-once; with 2a, exactly-once per claim identity.
 
 **Theorem 2c (Workflow completion — policy-dependent).** The protocol does **not** guarantee the agent emits the remaining claims of a workflow; completion is a property of the planning/recovery policy, not the protocol. The measured 66/70 completion (94.29%, gpt-4o-mini; the 4 misses were model re-emission loops, a supervisor-policy behavior) is an empirical completion rate under a specific policy, not a liveness proof. Safety (2a) held on all 70 episodes including the 4 incomplete ones: 0 duplicates.
 >
@@ -115,11 +131,11 @@ characterizes the failure side of that boundary.
 - **(L1) Tool idealization.** (A1) assumes atomic check-and-commit at T. Real tools with non-atomic or non-idempotent APIs need an adapter (e.g., a transactional outbox at the tool boundary); the theorem does not cover them. Same idealization as LIMBO's tool contract — cite it as shared ground, not as a weakness unique to this work.
 - **(L2) Log durability.** (A2) is assumed, not proved. Log loss voids the guarantee — the standard WAL assumption, stated explicitly rather than buried.
 - **(L3) Safety, conditional liveness, no workflow-completion guarantee.** Theorem 2a is a *safety* property (no duplicate commits per claim identity). Theorem 2b gives at-least-once of *claimed* effects only under explicit progress assumptions (P1–P3). Neither proves the agent will emit remaining claims — workflow completion depends on the planning/recovery policy (Theorem 2c; measured 66/70 under the gpt-4o-mini supervisor policy). (See `MISSES_ANALYSIS.md`: the observed "misses" were the test harness's own attempt cap, now fixed; the protocol itself imposes no liveness bound, but neither does it guarantee agent progress.)
-- **(L4) Semantic identity is a modeling choice.** The skip-logic keys on `(action, target)` as the stable business identity of an effect. Effects whose identity cannot be captured this way need a domain-specific identity function; misidentification breaks skipping in either direction. The paper must state the identity assumption per deployment.
+- **(L4) Semantic identity is a modeling choice.** The skip-logic keys on `(action, target, occurrence)` as the stable business identity of an effect. Effects whose identity cannot be captured this way need a domain-specific identity function; misidentification breaks skipping in either direction. The paper must state the identity assumption per deployment.
 - **(L5) Fault scope.** Crash-stop H only; no Byzantine harness, no tool-side crashes, single writer per workflow per epoch (fencing enforces this).
 - **(L6) Claim discipline is enforced, not assumed.** (A5) held at 98.3% step-level in LLM validation because the harness *refuses* tool calls without valid claims — violations degrade to refused calls (missing, never duplicates). A deployment must preserve the refusal direction.
 
-- **(L7) Mechanism vs. information.** The theorems establish necessity of *durable write-ahead identity information* (Corollary, §3), not uniqueness of the append-only log schema. A durable operation table (identity → status) written before each tool call would satisfy the same requirement; our JSONL claim log is the evaluated sufficient mechanism. Claims in the paper about "necessity" refer to the information, never the schema.
+- **(L7) Mechanism vs. information.** The theorems establish necessity of *durable write-ahead identity information* (scoped remark, §3) *under the stated recovery-information model*, not uniqueness of the append-only log schema. A durable operation table (identity → status) written before each tool call would satisfy the same requirement; our JSONL claim log is the evaluated sufficient mechanism. Claims in the paper about "necessity" refer to the information under that model, never the schema, and never universally.
 
 ## 6. Positioning note (for the paper's intro / related work)
 

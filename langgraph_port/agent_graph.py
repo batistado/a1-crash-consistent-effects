@@ -202,7 +202,8 @@ def claim_node(state):
     key, skip = None, False
     if cond == "wal":
         log = ClaimLog(os.path.join(state["run_dir"], "claim.log"))
-        existing = log.find_by_identity(action, args.get("target"))
+        existing = log.find_by_identity(action, args.get("target"),
+                                          args.get("occurrence", 0))
         if existing is not None:
             # Never re-derive: reuse the durable pre-crash key. A committed
             # claim means the effect is done — skip re-execution entirely.
@@ -210,8 +211,10 @@ def claim_node(state):
             skip = log.is_committed(existing)
         else:
             key = deterministic_key(wid, uid, action)
+            occ = log.next_occurrence(action, args.get("target"))
             log.append_claim(uid, action, args.get("target"),
-                             args.get("note"), key, state["epoch"])
+                             args.get("note"), key, state["epoch"],
+                             occurrence=occ)
     elif cond == "deterministic":
         # keys-alone: re-derived at call time from retry-time inputs.
         # Fragile to plan shifts by construction (Theorem 1, case ii).

@@ -1,0 +1,60 @@
+[01:47:03] tool server up at http://127.0.0.1:8768
+[01:47:03] condition=det_content episodes=60
+[01:47:28]   [det_content] 1/60 dup=2 miss=0 eo=False crash=mid_fanout
+[01:47:54]   [det_content] 2/60 dup=2 miss=0 eo=False crash=retry_backoff
+[01:48:24]   [det_content] 3/60 dup=2 miss=0 eo=False crash=mid_fanout
+[01:48:48]   [det_content] 4/60 dup=2 miss=0 eo=False crash=mid_fanout
+[01:49:24]   [det_content] 6/60 dup=2 miss=0 eo=False crash=mid_fanout
+[01:49:55]   [det_content] 8/60 dup=2 miss=0 eo=False crash=retry_backoff
+[01:50:15]   [det_content] 9/60 dup=2 miss=0 eo=False crash=mid_fanout
+[01:50:29]   [det_content] 10/60 dup=0 miss=0 eo=True crash=post_branch
+[01:50:49]   [det_content] 11/60 dup=2 miss=0 eo=False crash=mid_fanout
+[01:51:14]   [det_content] 12/60 dup=2 miss=0 eo=False crash=mid_fanout
+[01:52:42]   [det_content] 15/60 dup=2 miss=0 eo=False crash=mid_fanout
+[01:53:45]   [det_content] 17/60 dup=2 miss=0 eo=False crash=mid_fanout
+[01:54:21]   [det_content] 18/60 dup=2 miss=0 eo=False crash=mid_fanout
+[01:55:41]   [det_content] 20/60 dup=2 miss=0 eo=False crash=mid_fanout
+[01:56:29]   [det_content] 21/60 dup=2 miss=0 eo=False crash=mid_fanout
+[01:57:49]   [det_content] 23/60 dup=2 miss=0 eo=False crash=retry_backoff
+[01:58:30]   [det_content] 24/60 dup=2 miss=0 eo=False crash=mid_fanout
+[01:59:06]   [det_content] 25/60 dup=2 miss=0 eo=False crash=mid_fanout
+[01:59:42]   [det_content] 26/60 dup=2 miss=0 eo=False crash=retry_backoff
+[02:00:13]   [det_content] 27/60 dup=2 miss=0 eo=False crash=mid_fanout
+[02:00:46]   [det_content] 28/60 dup=2 miss=0 eo=False crash=retry_backoff
+[02:01:17]   [det_content] 29/60 dup=2 miss=0 eo=False crash=mid_fanout
+[02:01:54]   [det_content] 30/60 dup=2 miss=0 eo=False crash=mid_fanout
+[02:04:12]   [det_content] 34/60 dup=2 miss=0 eo=False crash=retry_backoff
+[02:04:48]   [det_content] 35/60 dup=2 miss=0 eo=False crash=mid_fanout
+[02:05:50]   [det_content] 37/60 dup=2 miss=0 eo=False crash=retry_backoff
+[02:07:05]   [det_content] 39/60 dup=2 miss=0 eo=False crash=mid_fanout
+[02:07:32]   [det_content] 40/60 dup=2 miss=0 eo=False crash=mid_fanout
+[02:08:03]   [det_content] 41/60 dup=2 miss=0 eo=False crash=mid_fanout
+[02:08:40]   [det_content] 42/60 dup=2 miss=0 eo=False crash=mid_fanout
+[02:09:17]   [det_content] 43/60 dup=2 miss=0 eo=False crash=mid_fanout
+[02:09:51]   [det_content] 44/60 dup=2 miss=0 eo=False crash=mid_fanout
+[02:11:08]   [det_content] 46/60 dup=2 miss=0 eo=False crash=mid_fanout
+[02:11:32]   [det_content] 47/60 dup=2 miss=0 eo=False crash=mid_fanout
+[02:12:02]   [det_content] 48/60 dup=2 miss=0 eo=False crash=mid_fanout
+[02:12:31]   [det_content] 49/60 dup=2 miss=0 eo=False crash=retry_backoff
+[02:12:56]   [det_content] 50/60 dup=2 miss=0 eo=False crash=retry_backoff
+[02:13:25]   [det_content] 51/60 dup=2 miss=0 eo=False crash=mid_fanout
+[02:13:44]   [det_content] 52/60 dup=2 miss=0 eo=False crash=mid_fanout
+[02:14:07]   [det_content] 53/60 dup=2 miss=0 eo=False crash=mid_fanout
+[02:14:35]   [det_content] 54/60 dup=2 miss=0 eo=False crash=retry_backoff
+[02:15:06]   [det_content] 55/60 dup=2 miss=0 eo=False crash=mid_fanout
+[02:15:32]   [det_content] 56/60 dup=2 miss=0 eo=False crash=mid_fanout
+[02:15:58]   [det_content] 57/60 dup=2 miss=0 eo=False crash=mid_fanout
+[02:16:24]   [det_content] 58/60 dup=2 miss=0 eo=False crash=retry_backoff
+[02:16:51]   [det_content] 59/60 dup=2 miss=0 eo=False crash=mid_fanout
+[02:17:14]   [det_content] 60/60 dup=2 miss=0 eo=False crash=mid_fanout
+[02:17:14] condition=wal episodes=60
+[02:19:28]   [wal] 10/60 dup=0 miss=0 eo=True crash=mid_fanout
+[02:21:13]   [wal] 20/60 dup=0 miss=0 eo=True crash=retry_backoff
+[02:22:32]   [wal] 30/60 dup=0 miss=0 eo=True crash=mid_fanout
+[02:24:13]   [wal] 40/60 dup=0 miss=0 eo=True crash=mid_fanout
+[02:25:47]   [wal] 50/60 dup=0 miss=0 eo=True crash=retry_backoff
+[02:27:10]   [wal] 60/60 dup=0 miss=0 eo=True crash=mid_fanout
+[02:27:10] [det_content] dup_rate=0.7667 exactly_once=0.2333 partial=1.0
+[02:27:10] [wal] dup_rate=0.0 exactly_once=1.0 partial=1.0
+[02:27:10] claim-log latency p50=0.021511s p99=0.062738s n=798
+[02:27:10] wrote results_e2b_content.json

@@ -1,0 +1,9 @@
+[K=1] shared server up at http://127.0.0.1:8770
+[K=1] harness j=0 pid=27716
+Traceback (most recent call last):
+  File "/home/hatch/workspace/orx-projects/a1-crash-consistent-effects/langgraph_port/e3c_driver.py", line 115, in <module>
+    main()
+  File "/home/hatch/workspace/orx-projects/a1-crash-consistent-effects/langgraph_port/e3c_driver.py", line 86, in main
+    with open(jp) as f:
+         ^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/home/hatch/workspace/orx-projects/a1-crash-consistent-effects/langgraph_port/results_e3c_k1_j0.jsonl'

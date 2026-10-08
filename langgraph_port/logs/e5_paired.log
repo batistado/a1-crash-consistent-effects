@@ -1,0 +1,15 @@
+[02:57:58] tool server up at http://127.0.0.1:8769
+[02:57:58] condition=wal episodes=20
+[02:59:18]   [wal] 10/20 dup=0 miss=0 eo=True crash=mid_fanout
+[03:00:47]   [wal] 20/20 dup=0 miss=0 eo=True crash=retry_backoff
+[03:00:47] condition=native episodes=20
+[03:02:14]   [native] 10/20 dup=0 miss=0 eo=True crash=mid_fanout
+[03:03:53]   [native] 20/20 dup=0 miss=0 eo=True crash=mid_fanout
+[03:03:53] condition=deterministic episodes=20
+[03:05:15]   [deterministic] 10/20 dup=0 miss=0 eo=True crash=retry_backoff
+[03:06:34]   [deterministic] 20/20 dup=0 miss=0 eo=True crash=mid_fanout
+[03:06:35] [wal] dup_rate=0.0 exactly_once=1.0 partial=1.0
+[03:06:35] [native] dup_rate=0.0 exactly_once=1.0 partial=1.0
+[03:06:35] [deterministic] dup_rate=0.0 exactly_once=1.0 partial=1.0
+[03:06:35] claim-log latency p50=0.021023s p99=0.07259s n=258
+[03:06:35] wrote results_e5_paired.json

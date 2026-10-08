@@ -1,0 +1,7 @@
+[03:07:30] tool server up at http://127.0.0.1:8770
+[03:07:30] condition=wal episodes=20
+[03:08:51]   [wal] 10/20 dup=0 miss=0 eo=True crash=mid_fanout
+[03:10:14]   [wal] 20/20 dup=0 miss=0 eo=True crash=retry_backoff
+[03:10:14] [wal] dup_rate=0.0 exactly_once=1.0 partial=1.0
+[03:10:14] claim-log latency p50=0.016858s p99=0.048259s n=258
+[03:10:14] wrote results_e5p_wal.json

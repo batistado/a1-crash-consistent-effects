@@ -1,0 +1,8 @@
+[02:01:22] tool server up at http://127.0.0.1:8771
+[02:01:22] condition=wal episodes=30
+[02:07:09]   [wal] 10/30 dup=0 miss=0 eo=True crash=mid_fanout
+[02:12:34]   [wal] 20/30 dup=0 miss=0 eo=True crash=retry_backoff
+[02:16:39]   [wal] 30/30 dup=0 miss=0 eo=True crash=mid_fanout
+[02:16:39] [wal] dup_rate=0.0 exactly_once=1.0 partial=1.0
+[02:16:39] claim-log latency p50=0.033124s p99=0.117582s n=286
+[02:16:39] wrote results_e3a_n2.json

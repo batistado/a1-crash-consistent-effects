@@ -1,0 +1,22 @@
+{
+ "results": [
+  {
+   "test": "a-suppression",
+   "pass": true,
+   "commits": 1,
+   "retry_skipped": true
+  },
+  {
+   "test": "b-distinct-occurrences",
+   "pass": true,
+   "commits": 2
+  },
+  {
+   "test": "b-old-logic-collapses",
+   "pass": true,
+   "old_logic_matches_occ1": true,
+   "new_logic_matches_occ1": false
+  }
+ ],
+ "verdict": "PASS"
+}
