@@ -28,7 +28,8 @@ crash consistency; exactly-once semantics; checkpointing; write-ahead logging; L
 - ⚠️ **Endorsement check needed:** first-time arXiv submitters require endorsement in the category. Mohammed must confirm his arXiv account is endorsed for cs.DC, or arrange endorsement before posting.
 - IEEE policy: preprints on arXiv are explicitly allowed and are NOT prior publication. Declare the arXiv URL in the ScholarOne submission when asked. After IEEE acceptance, update the arXiv record with the IEEE copyright notice / DOI.
 
-## ScholarOne (TPDS) checklist
+## IEEE Author Portal (TPDS) checklist
+> NOTE (verified 2026-10-08): TPDS no longer uses ScholarOne for submissions — the official portal is the IEEE Author Portal at https://ieee.atyponrex.com/journal/tpds-cs (IEEE web account required; self-registration available). The legacy ScholarOne site still resolves but is not the entry point.
 - [ ] Manuscript PDF (a1-phase9-12pp.pdf)
 - [ ] Cover letter (cover-letter-tpds-draft.md → finalize)
 - [ ] Title, abstract, keywords entered

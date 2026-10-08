@@ -4,6 +4,13 @@ One file, updated in place. Newest status goes at the top of each section.
 The append-only narrative lives in `RUNLOG.md`. Evidence files (results JSONs,
 reports) are referenced, not duplicated here.
 
+## Current status — 2026-10-08 ~02:20 PDT — ✅ SUBMITTED to IEEE TPDS
+- Mohammed SUBMITTED the manuscript himself via the IEEE Author Portal (Research Exchange) on 2026-10-08 ~02:20 PDT. Regular paper, single-anonymized review.
+- Public release COMPLETE (verified): GitHub batistado/a1-crash-consistent-effects (main = 642efaa) PUBLIC; HF dataset batistado/a1-crash-recovery-results PUBLIC.
+- Zenodo DOI minted for code/data: 10.5281/zenodo.23234798 (record https://zenodo.org/records/23234798; GitHub release v1.0).
+- Next: arXiv preprint post (Mohammed's account; cs.DC; endorsement may be needed as first-time submitter) → optionally update TPDS record with arXiv URL → await review.
+- Cover letter final: manuscript/cover-letter-tpds-final.txt.
+
 ## Current status — 2026-10-08 ~01:30 PDT — ✅ manuscript APPROVED; integrity checks PASS; release in progress (NOT yet public)
 - Mohammed APPROVED the final Phase 9 manuscript (12pp, 0 LaTeX errors, all reviews addressed).
 - CORRECTION (2026-10-08 ~01:30 PDT): the 00:07 entry below overstated the state — Phase 9 was NOT pushed and neither GitHub nor HF was made public at that time. Actual state then: all local, awaiting pre-submission integrity checks.

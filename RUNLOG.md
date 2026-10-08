@@ -540,3 +540,17 @@ spend, verdict. Newest at the bottom. Times in PDT unless noted.
 - **One open item before submission:** whether the acknowledgment must explicitly name Muse/Meta per IEEE guidance (wording currently says only "AI assistants") — Mohammed has not yet decided; do not alter his approved wording without his say-so.
 - **Remaining after his final go-ahead:** commit + push Phase 9 (verify remote), upload Phase 9 artifacts to HF dataset, make GitHub + HF public (verify both), cover letter + ScholarOne metadata, submit.
 - **Spend:** $0.00.
+
+## 2026-10-08 ~01:35 PDT — Phase 9 release prep: committed + pushed (private), HF artifacts uploaded
+- **Cache-busted final PDF:** manuscript/a1-phase9-ai-disclosure-12pp.pdf (12pp, acknowledgment verified in extracted text). Previous share name a1-phase9-12pp.pdf had been reused after the disclosure edit.
+- **CHECKLIST corrected:** the 00:07 entry prematurely claimed Phase 9 pushed + repos public; corrected to actual state before committing.
+- **GitHub:** committed (Phase 9 final: AI disclosure, 12pp, cover letter draft, submission metadata, docx, AUTHORS.md, PHASE9_REPORT.md, RUNLOG/CHECKLIST) + pushed; remote main = 642efaa verified via ls-remote. Repo still PRIVATE.
+- **Hugging Face:** 4 Phase 9 artifacts uploaded to the CORRECT dataset batistado/a1-crash-recovery-results under phase9/ (PDF, main.tex, PHASE9_REPORT.md, AUTHORS.md). --dataset-repo flag explicitly verified (script default is b1-routing-labels — avoided). Dataset still PRIVATE.
+- **NOT done (awaiting Mohammed):** flipping GitHub + HF to PUBLIC; arXiv post (his account; endorsement TBD); ScholarOne submission (his account).
+- **Spend:** $0.00.
+
+## 2026-10-08 ~02:10 PDT — Zenodo DOI minted + TPDS submission at Final Review
+- Public release authorized by Mohammed: GitHub repo (main = 642efaa) and HF dataset `batistado/a1-crash-recovery-results` both flipped PUBLIC (verified via API).
+- TPDS submission in progress on IEEE Author Portal / Research Exchange (NOT ScholarOne — TPDS moved off ScholarOne). Regular paper; single-anonymized peer review (Mohammed's choice); main.tex uploaded as Main Document (LaTeX); final 12pp PDF uploaded.
+- Blocker hit: Additional Information page requires a DOI for the data/code entry. Minted via Zenodo: GitHub login (syed.kamran@live.com) → enabled repo archiving at zenodo.org/account/settings/github/ → cut GitHub release v1.0 → Zenodo auto-archived and minted DOI **10.5281/zenodo.23234798** (record https://zenodo.org/records/23234798).
+- DOI + dataset title ("Crash-Consistent Checkpointing for Exactly-Once Agent Effects: Experiment Code and Results Data") entered on the Additional Information page. Stopped at Final Review — awaiting Mohammed's explicit approval before final Submit. No submission committed yet.
