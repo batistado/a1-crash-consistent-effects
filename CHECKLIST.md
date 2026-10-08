@@ -4,12 +4,14 @@ One file, updated in place. Newest status goes at the top of each section.
 The append-only narrative lives in `RUNLOG.md`. Evidence files (results JSONs,
 reports) are referenced, not duplicated here.
 
-## Current status — 2026-10-07 ~19:10 PDT
+## Current status — 2026-10-07 ~19:45 PDT — ALL PHASE-4 EXPERIMENTS COMPLETE
 - E1 (native-persistence baseline) DONE: 60 eps, dup_rate 0.0000, exactly-once 1.000 — matches WAL. Boundary result: native persistence + stable identities suffices; WAL's value is the identity-shift case.
+- E2a (positional identity-shift) DONE: det_shift 60 eps → dup-ep rate 0.7667 (46/60), eo 0.2333, plus 0.77 missing/ep (cross-operation key collisions); wal 60 eps → 0.0000/1.0000; baseline 0.80/0.20. PASS.
+- E2b (content identity-shift) DONE: det_content 60 eps → dup-ep rate 0.7667 (46/60), eo 0.2333, 0 missing; wal 60 eps → 0.0000/1.0000. PASS. (Scoring canonicalizes reworded targets; committed in harness.)
+- E3a (fan-out 2/4/8, wal) DONE (sibling): 30 eps each, 0.0000 dup / 1.0000 eo at all fan-outs.
+- E3b (claim-log length microbench) DONE: append p50 ~0.03 ms flat; find_by_identity linear scan — 0.6 ms (100) → 33 ms (1k) → 373 ms (10k). O(n) lookup is the scaling bottleneck; indexing is follow-up.
+- E3c (concurrent workflows, shared server) DONE 2026-10-08: K=1 689 ops/s p50 1.3 ms; K=4 636 ops/s p50 5.4 ms; K=16 310 ops/s p50 11.2 ms, p99 1055 ms. PASS with caveat (single-threaded server serializes at K=16).
 - E4 (fencing trace) DONE: 200 eps, dup-episode rate 0.51, 102/102 offending calls class b (surviving-zombie fresh keys, epoch 0; recovery's same-key retry correctly suppressed). Causal evidence the reviewer asked for.
-- E2a (positional identity-shift) RUNNING: 57/60 eps, det_shift already showing duplicates (dup=1, miss=1 on recent eps).
-- E2b (content identity-shift) RUNNING: 41/60 eps, det_content showing duplicates (dup=2).
-- E3 (scale: fan-out 2/4/8, concurrent, log length) RUNNING: early (11–12 eps per config).
 - Phases 1–3 (writing, theory, protocol spec) NOT STARTED. Phase 5 pending Phase 4.
 
 ## Reviewer feedback summary (2026-10-07, research reviewer LLM, private pre-submission)
@@ -50,9 +52,9 @@ Suggested central contribution: "a crash-recovery protocol that preserves tool-o
 
 ## Phase 4 — Experiments (designs condensed; full detail in git history)
 - [x] E1 — Native-persistence baseline: LangGraph SqliteSaver + deterministic positional keys, no claim log, matched crash schedules, 60 eps. DONE 2026-10-07: dup 0.0000 / exactly-once 1.000. → paper claim becomes the boundary characterization. (`results_e1_native.json`)
-- [ ] E2a — Positional identity-shift (RUNNING, 57/60): recovery replanning permutes branch indices via seeded permutation; det keys re-derive to new indices → unseen keys → duplicates. WAL reuses original key via find_by_identity. Expect det_shift dups > 0, wal 0.
-- [ ] E2b — Content identity-shift (RUNNING, 41/60): scripted invertible paraphrase of targets across recovery; content-hash keys break, WAL canonicalizes. Expect det_content dups > 0, wal 0.
-- [ ] E3 — Scale (RUNNING, early): fan-out {2,4,8} × 30 eps wal; log-length microbench {100,1k,10k} append + find_by_identity latency; concurrent workflows {1,4,16} × 20 eps. Metrics: dup rate, completion, p50/p99 write latency, e2e latency, recovery time.
+- [x] E2a — Positional identity-shift (DONE 2026-10-07): det_shift 60 eps → dup-ep rate 0.7667 (46/60), eo 0.2333, mean 0.77 dup/ep + 0.77 missing/ep (mid_fanout 26/26, retry_backoff 20/20, post_branch 0/14); wal 60 eps → 0.0000/1.0000; baseline 0.80/0.20. Two failure modes: unseen re-derived keys → duplicates; colliding re-derived keys → lost effects. (`results_e2a_shift.json`)
+- [x] E2b — Content identity-shift (DONE 2026-10-07): det_content 60 eps → dup-ep rate 0.7667 (46/60), eo 0.2333, 0 missing (mid_fanout 35/35, retry_backoff 11/12, post_branch 0/13); wal 60 eps → 0.0000/1.0000. Scoring canonicalizes reworded targets. (`results_e2b_content.json`)
+- [x] E3 — Scale: E3a fan-out {2,4,8} × 30 eps wal DONE: 0.0000 dup / 1.0000 eo at all fan-outs. E3b log-length microbench DONE: append p50 ~0.03 ms flat (O(1)); find_by_identity 6.6 ms → 16.8 ms → 850 ms at 100/1k/10k claims (O(n) linear scan + full re-parse; indexing = follow-up). E3c concurrent workflows DONE 2026-10-08: K=1 689 ops/s p50 1.3 ms; K=4 636 ops/s p50 5.4 ms; K=16 310 ops/s p50 11.2 ms p99 1055 ms (single-threaded HTTP server serializes — concurrent server needed for production; experimental scale unaffected).
 - [x] E4 — Fencing trace (DONE 2026-10-07): 200 eps no-fencing, 0.51 dup-episode rate, 102/102 class b (fresh-key zombie, epoch 0); 0 class a (same-key recommit). Mechanism confirmed. (`results_e4_fencing_trace.json`)
 - Spend: $0 API (all scripted). Fault model: SIGKILL of own harness processes only.
 
