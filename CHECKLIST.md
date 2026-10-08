@@ -4,7 +4,12 @@ One file, updated in place. Newest status goes at the top of each section.
 The append-only narrative lives in `RUNLOG.md`. Evidence files (results JSONs,
 reports) are referenced, not duplicated here.
 
-## Current status — 2026-10-08 — Phase 7 COMPLETE (third review addressed, awaiting Mohammed)
+## Current status — 2026-10-08 — Phase 8b COMPLETE (fourth review addressed, 12pp, awaiting Mohammed)
+- Fourth review (2026-10-07): best yet — short final pass, no new experiments. Phase 8 ran as 2 parallel workers: 8a Khan verification → CONFIRMED (reviewer right); 8b six small corrections + verified Khan integration + re-trim.
+- 8b DONE 2026-10-08: all six corrections applied + verified in PDF (L7 scoped wording, §8 identity-contract qualification, linearizes-first, E5 in-window crash, Figure 2 redrawn, E3b fsync disclosed); Khan passages replaced with verified text (§2.3, Table 1 row, §2.4 novelty claim, contract/mechanism sentence); 13pp → 12pp, 0 LaTeX errors. Report: PHASE8_REPORT.md. NOT committed/pushed (Mohammed reviews first).
+- Next: Mohammed's review → push → TPDS submission decision.
+
+## Previous status — 2026-10-08 — Phase 7 COMPLETE (third review addressed, awaiting Mohammed)
 - Third review (2026-10-07): genuinely new 14pp revision confirmed. All 4 remaining items ADDRESSED 2026-10-08: (1) create-or-reuse algorithm + invariant-preservation argument + conditional guarantee + E7 trace/test PASS (2 refunds + retries, 3 commits, invariant audit clean); (2) E2 as combined-design evaluation, E1 kept prominent; (3) proof/scope cleanup (Theorem 1 ending, L7 vs Remark 2, linearization-point Case 3a, previous-version paragraph → response file); (4) reporting/layout fixes (E5 timing, E4 sandbox note, zombie description, Figure 2, Table 1, Khan formal-neighbor citation, TPDS page cap: 12pp regular, up to 18pp with MOPC — 14pp submittable with charges).
 - PDF: 14pp, 0 LaTeX errors, self re-review verified in built PDF. Report: PHASE7_REVIEW_RESPONSE.md. NOT committed/pushed (Mohammed reviews first).
 - Next: Mohammed's review → resubmit decision.

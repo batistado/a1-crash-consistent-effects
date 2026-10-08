@@ -17,6 +17,12 @@
 
 \hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
 
+% Tighter float placement to keep tables/figures inline (page-count control)
+\renewcommand{\textfraction}{0.05}
+\renewcommand{\topfraction}{0.95}
+\renewcommand{\bottomfraction}{0.95}
+\setcounter{totalnumber}{6}
+
 \begin{document}
 
 \title{Crash-Consistent Checkpointing for Exactly-Once Agent Effects:\\
@@ -33,35 +39,33 @@ A Write-Ahead Claim Log for LLM Agent Harnesses}
 
 \begin{abstract}
 LLM agent harnesses checkpoint \emph{trajectories}, not \emph{effect
-commitments}. When the harness process crashes in the window between a
-tool-effect commit and the checkpoint write, the resumed agent re-fires
-the tool, producing a duplicate side effect---the ``double refund''
-window. We show that idempotency keys alone cannot close this window in
-general: content-hash keys break when the recovered agent rewords
-arguments on retry, and deterministic $(\mathit{workflow},\mathit{step},
-\mathit{action})$ keys break when recovery replanning shifts step
-indices. We prove this fragility formally for the case where the
-key derivation actually changes across the recovery replan
-(Theorem~1)---mutable inputs alone do not imply mutable outputs---and
-propose a
-\emph{write-ahead effect-claim log}: the claim and its key are logged
-durably \emph{before} the tool is invoked, checkpoints are fenced by the
-log, and recovery reconciles from the log first, guarded by a fencing
-epoch against stale writers. Across a scripted sandbox (1,500
-episodes/condition), two-model LLM validation (140 episodes: 70 per model; 210 including the tight-prompt ablation),
-component ablations, and a production-shaped LangGraph deployment with
-real \texttt{SIGKILL} fault injection---including a real-LLM supervisor
-under uniform and mixed routing distributions---the protocol commits
-\emph{zero duplicate effects} in every campaign (one-sided exact 95\%
-upper bounds: 4.87\% at $n{=}60$, 0.20\% at $n{=}1{,}500$), where the
-baseline duplicates at 0.77--0.83 and idempotency keys at 0.21--0.37.
-Workflow completion (every accepted effect committed exactly once)
-reaches 1.000 in the sandbox, the LangGraph campaigns, and LLM
-validation with gpt-4.1-mini (70/70) and with a tightened recovery
-prompt for gpt-4o-mini (70/70); under the loose prompt gpt-4o-mini
-completes 66/70, the 4 misses being prompt-fixable model
-re-emission loops, never duplicate commits. Claim-log write latency
-is p50 20.3\,ms per step (fsync'd Claim/Commit records).
+commitments}. When the harness crashes between a tool-effect commit
+and the checkpoint write, the resumed agent re-fires the tool,
+producing a duplicate side effect---the ``double refund'' window.
+Idempotency keys alone cannot close this window in general:
+content-hash keys break when the recovered agent rewords arguments,
+and deterministic $(\mathit{workflow},\mathit{step},
+\mathit{action})$ keys break when replanning shifts step indices.
+We prove this fragility formally for derivations that actually
+change across the recovery replan (Theorem~1) and propose a
+\emph{write-ahead effect-claim log}: the claim and its key are
+logged durably \emph{before} the tool is invoked, checkpoints are
+fenced by the log, and recovery reconciles from the log first under
+a fencing epoch against stale writers. Across a scripted sandbox
+(1,500 episodes/condition), two-model LLM validation (140 episodes;
+210 with the tight-prompt ablation), component ablations, and a
+production-shaped LangGraph deployment with real \texttt{SIGKILL}
+injection, the protocol commits \emph{zero duplicate effects} in
+every campaign (one-sided exact 95\% upper bounds: 4.87\% at
+$n{=}60$, 0.20\% at $n{=}1{,}500$), where the baseline duplicates at
+0.77--0.83 and idempotency keys at 0.21--0.37. Completion (every
+accepted effect committed exactly once) reaches 1.000 in the
+sandbox, the LangGraph campaigns, and LLM validation with
+gpt-4.1-mini (70/70) and with a tightened recovery prompt for
+gpt-4o-mini (70/70); under the loose prompt gpt-4o-mini completes
+66/70, the 4 misses being prompt-fixable model re-emission loops,
+never duplicate commits. Claim-log write latency is p50 20.3\,ms
+per step (fsync'd Claim/Commit records).
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -84,48 +88,42 @@ architecture: the harness checkpointed the agent's \emph{trajectory}
 
 This is the normal operating picture for modern agent harnesses.
 LangGraph, CrewAI, AutoGen, and the OpenAI Agents SDK all persist
-enough state to resume a conversation after a crash. None of them,
-as of this writing, provides crash-consistent exactly-once
-semantics for \emph{external side effects}. Production documentation
-acknowledges the gap plainly: work performed between the last
-checkpoint and a crash ``can run again'' for external effects.
-Independent measurements confirm that LangGraph re-executes
-durably recorded work after real process kills~\cite{khan2026resume}.
-As agents move from demos to production---handling money,
-sending customer-facing email, mutating systems of record---the
-``double refund'' window stops being an edge case and becomes a
-correctness bug with financial and legal consequences.
+enough state to resume a conversation after a crash. None, as of
+this writing, provides crash-consistent exactly-once semantics for
+\emph{external side effects}: work performed between the last
+checkpoint and a crash ``can run again,'' and LangGraph has been
+measured re-executing durably recorded work after real process
+kills~\cite{khan2026resume}. As agents move from demos to
+production---handling money, sending customer-facing email, mutating
+systems of record---the ``double refund'' window stops being an edge
+case and becomes a correctness bug with financial consequences.
 
 The database community solved the analogous problem decades ago
 with write-ahead logging (WAL): never mutate state without first
 durably recording the intent, so recovery can reconcile. But the
-agent setting breaks a load-bearing assumption of classical WAL.
-In a database, the writer never re-synthesizes its own transaction
-identity after a crash; the log record and the retry trivially
-coincide. In an agent harness, the \emph{recovered agent is an LLM}
-that re-plans: it rewords arguments, inserts diagnostic steps,
-reorders its plan. Any recovery scheme that depends on the
-recovered agent re-deriving the \emph{same} effect identity it
-used before the crash is fragile whenever the re-derivation
-actually changes---and, as we prove in \S\ref{sec:formal} for
-that case, the failure is structural, not an artifact of a
-particular key scheme.
+agent setting breaks a load-bearing assumption of classical WAL:
+in a database the writer never re-synthesizes its own transaction
+identity after a crash, while in an agent harness the \emph{recovered
+agent is an LLM} that re-plans---rewording arguments, inserting
+steps, reordering its plan. Any recovery scheme that depends on the
+recovered agent re-deriving the \emph{same} effect identity is
+fragile whenever the re-derivation actually changes---and, as we
+prove in \S\ref{sec:formal} for that case, the failure is
+structural, not an artifact of a particular key scheme.
 
 The industry-standard remedy is idempotency keys: attach a key to
 each tool call so the tool can suppress repeats. Keys help---we
 measure duplicate rates falling from 0.77 to 0.21--0.37---but they
 fail exactly where LLM re-synthesis is most characteristic. A
-content-hash key over the arguments breaks when the recovered
-agent rewords them (observed reword rate 50\% in our scripted
-recovery, 11\% with real models). A deterministic key derived
-from $(\mathit{workflow\_id}, \mathit{step\_index},
-\mathit{action})$ breaks when recovery replanning shifts step
-indices (observed 30\% plan-shift rate). In both cases the retry
-presents a key the tool has never seen, the tool commits again,
-and the duplicate lands. The failure is structural: keys-alone
+content-hash key breaks when the recovered agent rewords arguments
+(50\% reword rate in our scripted recovery, 11\% with real models);
+a deterministic $(\mathit{workflow\_id}, \mathit{step\_index},
+\mathit{action})$ key breaks when replanning shifts step indices
+(30\% plan-shift rate). In both cases the retry presents an unseen
+key, the tool commits again, and the duplicate lands. Keys-alone
 pushes all of recovery correctness into a value re-derived
-\emph{after} the crash, by an agent whose re-synthesis the
-harness cannot constrain.
+\emph{after} the crash, by an agent whose re-synthesis the harness
+cannot constrain.
 
 This paper makes three contributions.
 
@@ -154,31 +152,27 @@ attempts---and that shifted keys colliding with another operation's
 committed key cause erroneous suppression instead; E2a/E2b map the
 two failure modes empirically. Under the recovery-information model
 of \S\ref{sec:formal}, durable write-ahead identity information is
-the necessary ingredient, and our claim log is a sufficient
-mechanism. Theorem~2 then
-separates what the protocol guarantees: at-most-once commitment
-per durable claim identity (safety), eventual commitment of
-accepted claims under explicit progress assumptions, and
-workflow completion as a property of the planning policy, not
-the protocol.
+the necessary ingredient and our claim log is a sufficient
+mechanism. Theorem~2 then separates the guarantees: at-most-once
+commitment per durable claim identity (safety), eventual commitment
+of accepted claims under explicit progress assumptions, and workflow
+completion as a property of the planning policy, not the protocol.
 
 \textbf{(3) Measurement.} We evaluate across four layers: a
 scripted sandbox (1,500 episodes per condition) isolating the
-fault; two-model LLM-driven validation (140 episodes: 70 per model), plus a
-70-episode tight-prompt ablation (210 LLM episodes total) with real
+fault; two-model LLM-driven validation (140 episodes: 70 per model),
+plus a 70-episode tight-prompt ablation (210 LLM episodes total) with real
 model re-synthesis on recovery; component ablations proving each
 protocol piece load-bearing against disjoint failure modes; and a
 production-shaped LangGraph deployment (branching supervisor,
-parallel fan-out, retries) with real \texttt{SIGKILL} fault
-injection, including a real-LLM supervisor variant under both
-uniform and mixed routing distributions. The write-ahead log
-achieves \textbf{0.000} duplicate-effect rate in every campaign
-and \textbf{1.000} exactly-once rate in all campaigns except
-gpt-4o-mini under the loose recovery prompt (66/70; tight
-prompt: 70/70), against baseline duplicate
-rates of 0.77--0.83 and idempotency-key rates of 0.21--0.37.
-Claim-log overhead is p50 20.3\,ms per step---about a 1\% tax on
-multi-second agentic steps.
+parallel fan-out, retries) with real \texttt{SIGKILL} injection,
+including a real-LLM supervisor under uniform and mixed routing.
+The write-ahead log achieves \textbf{0.000} duplicate-effect rate in
+every campaign and \textbf{1.000} exactly-once rate in all campaigns
+except gpt-4o-mini under the loose recovery prompt (66/70; tight
+prompt: 70/70), against baseline duplicate rates of 0.77--0.83 and
+idempotency-key rates of 0.21--0.37. Claim-log overhead is p50
+20.3\,ms per step---about a 1\% tax on multi-second agentic steps.
 
 The remainder of this paper is organized as follows.
 \S\ref{sec:related} surveys related work and positions this paper
@@ -198,22 +192,19 @@ results reveal; \S\ref{sec:limitations} states the limitations;
 \subsection{Idempotency keys for agent tools}
 
 The closest empirical work is Li's \emph{Where Does Exactly-Once Live?}~\cite{limbo2026}
-(whose sandbox is named Limbo), which
-applies idempotency keys to agent tool calls and measures
+(whose sandbox is named Limbo), which applies idempotency keys to agent tool calls and measures
 duplicate reduction from 28\% to 4\% across 12 injected fault
-modes. Its contribution is real, but its fault taxonomy is
-service-boundary throughout: the late-commit window it studies is
+modes. Its fault taxonomy is service-boundary throughout: the late-commit window it studies is
 the interval between the agent's dispatch and the service's commit
 becoming visible---the uncertainty is \emph{whether the service
-committed}. Its full text contains zero mentions of ``crash'' or
+committed}. Its text contains zero mentions of ``crash'' or
 ``write-ahead''; the harness-side checkpoint window is untested
 there. Our work is complementary: Li measures what keys achieve
 at the service boundary; we show where keys fail at the harness
 boundary and what structure is needed instead. We adopt the same
 tool-contract idealization (atomic check-and-commit) as shared
 ground. Its residual 4\% lives at the \emph{service} boundary
-(late commits, in-flight ambiguity across its twelve fault
-modes), a different fault class from our harness-side
+(late commits, in-flight ambiguity), a different fault class from our harness-side
 commit$\to$checkpoint window; we do not claim to explain it.
 What transfers is the lesson: wherever recovery correctness
 depends on re-deriving an identity after the failure, some
@@ -227,9 +218,10 @@ Means Resume}~\cite{khan2026resume} gives a machine-checked
 independently measures LangGraph re-executing durably recorded
 work after real \texttt{SIGKILL}---direct confirmation of the
 baseline fault our sandbox reproduces (0.80 duplicate rate). Where
-Khan specifies what resume \emph{must mean}, we show \emph{how to
-achieve} exactly-once for the commit$\to$checkpoint window and
-measure it: contract and mechanism, complementary. Zheng et
+Khan's contract specifies what resume must mean and Remit demonstrates
+checkpoint-interface enforcement, we address the pre-invocation window
+and receiver-boundary reconciliation: complementary mechanisms at
+different points of the crash window. Zheng et
 al.~\cite{zheng2026checkpoint} formalize exact checking of
 execution edits (checkpoint/fork/restore/merge) in Lean, noting
 that unsafe edits can ``authorize the same tool action twice'';
@@ -240,7 +232,7 @@ including unrecorded external effects with a duplicate-payment
 demonstration on LangGraph, under an adversarial framing.
 ACRFence~\cite{acrfence2026} is the closest adjacent mechanism:
 it \emph{records irreversible tool effects} and enforces
-replay-or-fork semantics upon restore, which overlaps with our
+replay-or-fork semantics upon restore, overlapping with our
 durable effect records in purpose if not in form. The
 differences are the threat model---semantic rollback
 \emph{attacks} (Action Replay, Authority Resurrection) versus
@@ -271,22 +263,28 @@ specify an idempotent atomic check-and-commit at the tool
 boundary, nor does it prove or measure exactly-once effect
 semantics under crash---its evaluation covers recovery
 correctness, token savings, and attack blocking, not the
-commit$\to$checkpoint window. Our claim log is a
-per-harness write-ahead \emph{effect-claim} log paired with
-log-fenced checkpoints and reconciliation-first recovery; where
+commit$\to$checkpoint window. Where
 LogAct's bus mediates among deconstructed agent roles, our log
 mediates between one crash-prone harness and its tools. The closest formal treatment of the checkpoint crash
-window we can identify is Khan's machine-checked conformance
-contract for checkpoint, interrupt, and resume semantics in
-workflow persistence
-layers~\cite{khan2026resume}: a TLA+/TLAPS specification of
-what resume must mean, with independent measurements confirming
-that LangGraph re-executes durably recorded work after real
-process kills---but without agents, LLMs, tools that keep
-their own records, or a mechanism. We cite it as the closest
-formal neighbor and distinguish our constructive, measured
-contribution: Khan specifies the contract; we supply the
-mechanism and the measurement.
+window we can identify is Khan's machine-checked conformance contract for checkpoint, interrupt,
+and resume semantics in workflow persistence layers~\cite{khan2026resume}: a TLA+/TLAPS specification, a 39-cell fault matrix, and live measurements on five deployed agent
+frameworks at pinned releases (LangGraph 1.2.9, CrewAI 1.15.2, pydantic-graph
+1.x) under real \texttt{SIGKILL}---direct confirmation of the baseline fault
+our sandbox reproduces (0.80 duplicate rate). Khan also ships a mechanism:
+REMIT, a reference resume sequencer and append-only effect ledger interposing
+at the checkpointer interface, recording $\langle$branch, task,
+effectId$\rangle$ records transactionally with the completion checkpoint and
+totally ordering persistence operations per thread via a sequencer; its
+recovery core is Verus-verified and the package is installable. The
+distinction is precise: REMIT sequences at the checkpoint interface and
+enforces dedup inside the harness through ledger-uniqueness and a read-path
+consume-claim gate, while our protocol writes the durable claim \emph{before}
+the tool is ever invoked and reconciles at the external receiver boundary---
+recovery replays the original key under a fresh fencing epoch, so the tool
+server's atomic check-and-commit, not the harness log alone, suppresses the
+duplicate. We cite Khan as the closest formal neighbor and position our
+contribution as the complementary pre-invocation, receiver-boundary half of
+the problem.
 
 \subsection{Durable execution and sagas}
 
@@ -328,22 +326,20 @@ replaying---may re-issue it under a re-derived identity. The
 claim log closes exactly this window: durable pre-commit
 identity records plus reconciliation-first recovery, at the
 granularity of individual tool effects rather than workflow
-activities. Our adaptation---semantic claim identity,
-log-fenced checkpoints, and epoch fencing at
-the harness/tool boundary, under LLM re-synthesis
-nondeterminism---is the non-trivial part, and the measured gap
-it closes (0.000 vs.\ 0.21--0.77) is the contribution. The saga
+activities. The saga
 pattern~\cite{sagas1987} addresses multi-step transaction
 compensation (semantic atomicity across services), a different
 correctness property from exactly-once of individual effects;
 our protocol composes with saga-style compensation (the claim
 log is a natural saga journal) but does not require it.
 
-In sum: no prior work combines the benign commit$\to$checkpoint
-crash window as the fault, a write-ahead effect-claim log with
-reconciliation-first recovery as the fix, measured zero
-duplicates at exactly-once 1.000, and an analysis of
-idempotency-key fragility under rewording and plan shift. A
+In sum: no prior work combines the benign commit$\to$checkpoint crash window
+under a re-planning LLM agent, a write-ahead effect-claim log recorded
+\emph{before} invocation (Remit's ledger records at checkpoint time),
+receiver-boundary reconciliation via original-key replay under fencing epochs
+(Remit dedups inside the harness), measured zero duplicates at exactly-once
+1.000, and an analysis of idempotency-key fragility under rewording and plan
+shift. A
 pre-submission literature re-check (October 2026) confirmed this
 against the active 2026 literature, which clusters around
 adversarial rollback, formal contracts and checking, sandbox
@@ -352,12 +348,13 @@ or different solutions.
 
 \begin{table*}[t]
 \centering
+\scriptsize
 \caption{Positioning: fault model, durable records, identity handling,
 receiver assumptions, fencing, guarantee, and evaluation across adjacent work.
 ``Harness-side'' = the commit$\to$checkpoint window $W(s)$; ``service-side'' =
 the dispatch$\to$commit visibility window.}
 \label{tab:positioning}
-\begin{tabular}{p{1.9cm}p{1.9cm}p{2.0cm}p{2.0cm}p{2.0cm}p{1.7cm}p{1.9cm}p{2.0cm}}
+\begin{tabular}{p{1.7cm}p{1.8cm}p{1.9cm}p{1.9cm}p{1.9cm}p{1.5cm}p{1.8cm}p{1.9cm}}
 \toprule
 Work & Fault model & Durable records & Identity handling & Receiver assumptions & Fencing & Guarantee & Evaluation \\
 \midrule
@@ -366,37 +363,37 @@ Benign crash-stop, harness-side $W(s)$ &
 Per-harness write-ahead effect-claim log; log-fenced checkpoints &
 Semantic $(\mathit{action},\allowbreak\mathit{target},\allowbreak\mathit{occurrence})$;
 original keys replayed, never re-derived &
-Idempotent, atomic check-and-commit; returns \textsc{duplicate\_suppressed} status only on duplicate &
-Epoch fencing vs.\ stale pre-crash writers &
-Exactly-once per durable claim identity (safety); 0 duplicates measured &
-1,500 eps/cond sandbox; 210 LLM eps; 60 eps/cond LangGraph + real SIGKILL; ablations; E1--E4 boundary experiments \\
+Idempotent atomic check-and-commit; \textsc{duplicate\_suppressed} status on duplicate &
+Epoch fencing vs.\ stale writers &
+Exactly-once per durable claim identity; 0 duplicates measured &
+1,500 eps/cond sandbox; 210 LLM eps; 60 eps/cond LangGraph + SIGKILL; ablations; E1--E5 \\
 \midrule
-Li~\cite{limbo2026} (``Limbo'' sandbox) &
-Service-side: timeouts, late commits, redelivery; benign &
-Ledger of committed effects (grading oracle), per-service idempotency-key sets &
-Keys attached by harness guard; agent re-synthesis out of scope &
-Optional idempotency keys; eventually consistent / missing read paths &
+Li~\cite{limbo2026} (``Limbo'') &
+Service-side: timeouts, late commits, redelivery &
+Ledger of committed effects; per-service key sets &
+Keys attached by harness guard; re-synthesis out of scope &
+Optional idempotency keys; eventually consistent &
 None &
-Measured: keys cut duplicates 28\%$\to$4\%; does not establish the harness-crash recovery guarantee (Prop.\ 2 gives conditional exactly-once for same-key reuse) &
-25,930 eps; 9 models; 3 harnesses; 12 fault modes; 15 recovery conditions \\
+Keys cut duplicates 28\%$\to$4\%; Prop.~2 gives conditional exactly-once for same-key reuse only &
+25,930 eps; 9 models; 12 fault modes \\
 \midrule
 ACRFence~\cite{acrfence2026} &
 \emph{Adversarial} rollback (Action Replay, Authority Resurrection) &
 Record of irreversible tool effects &
-Re-synthesized requests treated as new by servers (the attack) &
+Re-synthesized requests treated as new (the attack) &
 Server-side replay-or-fork enforcement &
 Implicit in replay-or-fork &
 Mitigation of semantic rollback attacks &
 PoC experiments \\
 \midrule
 LogAct~\cite{logact2026} &
-Crash-stop (agent or environment), benign &
+Crash-stop (agent or environment); primary focus \emph{single-agent} &
 Shared append-only AgentBus (WAL discipline); old-driver fencing &
 State-machine replay from bus; semantic (LLM) recovery &
 Voters approve pre-execution; executors typed &
-Old-driver fencing on the bus &
-Consistent recovery; attack blocking (3\% benign-utility cost) &
-Benchmarks: recovery correctness, token savings, attack blocking \\
+Old-driver fencing on bus &
+Consistent recovery; attack blocking &
+Recovery correctness, token savings, attack blocking \\
 \midrule
 AgentRewind~\cite{agentrewind2026} &
 Errors propagating through context/environment &
@@ -408,7 +405,7 @@ Improved task success / checklist progress &
 MettleBench long-horizon tasks \\
 \midrule
 Safe to Resume?~\cite{safutoresume2026} &
-\emph{Adversarial} rollback; 5 failure modes incl.\ unrecorded external effects &
+\emph{Adversarial} rollback; 5 modes incl.\ unrecorded effects &
 Varies by framework (the gap under study) &
 Nondeterministic replay characterized &
 Framework-dependent &
@@ -418,18 +415,18 @@ None---documents failures; double-payment demo &
 \midrule
 Khan~\cite{khan2026resume} &
 Crash-stop resume &
-Workflow persistence layer &
-N/A (contract level) &
-N/A &
-N/A &
-Machine-checked (TLA+/TLAPS) resume contract &
-LangGraph re-execution measurement \\
+Append-only effect ledger $\langle$branch, task, effectId$\rangle$ (Remit), tx w/ checkpoint &
+$\langle$checkpointId, resumeIndex$\rangle$ branch keying; per-branch ledgers &
+Skip iff durably recorded; read-path consume-claim gate &
+Sequencer total order; opt-in consumption gate &
+TLA+/TLAPS resume contract; Verus-verified core &
+39-cell matrix; 5 frameworks, real \texttt{SIGKILL}; Remit cells \\
 \midrule
 RIFL~\cite{rifl2015} &
 Server crash, benign &
-Durable completed-RPC result records, migrated with data &
+Durable completed-RPC result records &
 Client-supplied request IDs; retry recognized by ID &
-Returns saved result on duplicate; lease-GC'd metadata &
+Returns saved result on duplicate; lease-GC'd &
 N/A (no stale writers) &
 Linearizability (exactly-once RPC) &
 RAMCloud: $<$4\% overhead \\
@@ -440,14 +437,14 @@ WAL; dirty-page table; checkpoints &
 LSN-identified log records; no re-synthesis &
 Page-level redo/undo &
 N/A &
-Atomicity + durability (analysis/redo/undo) &
+Atomicity + durability &
 Analytical; systems at IBM \\
 \midrule
 Sagas~\cite{sagas1987} &
 Step failure, benign &
 Saga log; compensating transactions &
 Saga/step IDs; no re-synthesis &
-Compensating actions defined per step &
+Compensating actions per step &
 N/A &
 Semantic atomicity (all-or-compensated) &
 Analytical \\
@@ -457,28 +454,6 @@ Analytical \\
 
 \section{The Checkpoint Window}
 \label{sec:problem}
-
-\subsection{A concrete failure}
-
-Consider a three-step customer-support workflow: (1) look up the
-order (read-only), (2) issue a \$212 refund via
-\texttt{payments.refund} (non-idempotent), (3) send a
-confirmation email. The harness executes step~2: the tool commits
-(the money moves), and the harness prepares to write its
-checkpoint. Between those two events, the container is
-OOM-killed. On restart, the harness loads its last durable
-checkpoint, which records the workflow as ``step~2 pending.''
-The agent---a fresh LLM generation with no memory of the
-kill---reasons that the refund was never issued and fires
-\texttt{payments.refund} again. The tool, seeing a new request
-(or a re-derived key it does not recognize), commits again.
-Two refunds; one checkpoint.
-
-Note what did \emph{not} fail: the tool behaved correctly, the
-checkpoint logic behaved correctly, and the agent behaved
-rationally given its state. The fault is architectural: the
-durable state records \emph{intent} while the world records
-\emph{commitment}, and nothing durable bridges them.
 
 \subsection{Formalization}
 
@@ -533,16 +508,15 @@ checkpoint write---is the fault under study.}
 \end{figure}
 
 Two properties make this window specifically an \emph{agent}
-problem rather than a classical database problem. First, the
-recovered agent re-synthesizes its plan with an LLM: arguments
-get reworded, steps get inserted or reordered. Any recovery
-scheme that depends on the recovered agent re-deriving the
-\emph{same} effect identity is fragile by construction. Second,
-classical write-ahead logging assumes the writer never
-re-synthesizes its own transaction identity after a crash; the
-agent harness violates that assumption routinely. The fix must
-therefore make recovery \emph{independent} of the agent's
-post-crash re-derivation.
+problem. First, the recovered agent re-synthesizes its plan with
+an LLM: arguments get reworded, steps get inserted or reordered,
+so any recovery scheme depending on re-deriving the \emph{same}
+effect identity is fragile by construction. Second, classical
+write-ahead logging assumes the writer never re-synthesizes its
+own transaction identity after a crash; the agent harness
+violates that assumption routinely. The fix must therefore make
+recovery \emph{independent} of the agent's post-crash
+re-derivation.
 
 \section{Design: The Write-Ahead Effect-Claim Protocol}
 \label{sec:design}
@@ -740,7 +714,7 @@ concurrently claiming the same $(\mathit{action}, \mathit{target},
 \node[db,below=of l] (c) {Checkpoint $C$\\(log-fenced)};
 \node[box,right=of l] (t) {Tool $T$\\(idempotent\\receiver)};
 \draw[->] (h) -- node[font=\scriptsize,above,pos=0.3] {1: \textsc{Claim}} (l);
-\draw[->] (h.east) -- node[font=\scriptsize,above,pos=0.62] {2: call($k$, epoch)} (t.west);
+\draw[->] (h.south) -- ++(0,-0.7cm) -| node[font=\scriptsize,above,pos=0.55] {2: call($k$, epoch)} (t.south);
 \draw[->] (h) -- node[font=\scriptsize,below,pos=0.78] {3: \textsc{Commit}} (l);
 \draw[->] (l) -- node[font=\scriptsize,right] {fenced} (c);
 \draw[->,dashed,red] (l.east) -- ++(0.9,0) |- node[font=\scriptsize,
@@ -972,8 +946,8 @@ atomicity supplies a linearization point \emph{within} the
 call's processing, not immediate commitment on arrival. Either
 the atomic check-and-commit has already linearized (effect
 committed; the replayed key is then found and suppressed) or it
-has not yet linearized (the replayed key is the first to arrive
-and commits). In both cases exactly one commit results, because
+has not yet linearized (whichever valid attempt linearizes
+first commits---the replay need not be the first to arrive). In both cases exactly one commit results, because
 the key is deduplicated atomically at $T$; then
 \textsc{Commit} is written and $C$ advances (log-fenced).
 (3b)~The call was \emph{dispatched but not yet arrived}
@@ -1054,9 +1028,10 @@ never duplicates).
 
 \textbf{(L7) Mechanism vs.\ information.} Under the
 recovery-information model of \S\ref{sec:formal} (Remark~2),
-the theorems establish the necessity of \emph{durable
-write-ahead identity information}---not uniqueness of the
-append-only log schema. A durable operation table (identity
+Theorem~1 establishes conditional key fragility, and the model
+makes \emph{durable write-ahead identity information} a
+requirement \emph{within that model}---a scoped claim, never
+universal, and not uniqueness of the append-only log schema. A durable operation table (identity
 $\to$ status) written before each tool call would satisfy the
 same requirement; our claim log is the evaluated sufficient
 mechanism. Necessity claims in this paper refer to the
@@ -1074,19 +1049,15 @@ hold with real LLM re-synthesis on recovery, across models?
 (Q4) does it survive a production-shaped agent graph with real
 crashes? All crash injection uses real process kills; tools are
 atomic idempotent receivers recording every committed effect in
-an append-only ledger (ground truth). Total API spend across all LLM campaigns was \$0.114
-(\$0.095 for the three 70-episode validation runs, \$0.019 for
-the two LangGraph supervisor campaigns).
-Throughout, we report \emph{safety} (duplicate-effect rate: ledger
-commits beyond the first per semantic effect, per episode) separately
-from \emph{completion} (exactly-once rate: every accepted effect
-committed exactly once and the workflow finished). Safety is a property
-of the protocol and holds in every campaign; completion additionally
-depends on the recovery planning policy (\S\ref{sec:limitations}).
-Denominators are episodes per condition unless stated; ``duplicate
-rate'' is the fraction of episodes with $\geq$1 duplicate-effect
-ledger commit, ``exactly-once rate'' the fraction of episodes with
-every accepted effect committed exactly once and no missing effects.
+an append-only ledger (ground truth). Total API spend was \$0.114.
+We report \emph{safety} (duplicate-effect rate: ledger commits
+beyond the first per semantic effect) separately from
+\emph{completion} (exactly-once rate: every accepted effect
+committed exactly once). Safety is a protocol property and holds
+everywhere; completion additionally depends on the recovery
+planning policy (\S\ref{sec:limitations}). Denominators are
+episodes per condition; ``duplicate rate'' is the fraction of
+episodes with $\geq$1 duplicate ledger commit.
 
 \subsection{Q1: Scripted sandbox}
 
@@ -1127,8 +1098,7 @@ still duplicate on reworded retries; deterministic keys do
 better but still duplicate on plan shifts. The write-ahead log
 reaches zero duplicates and perfect exactly-once: recovery
 never depends on the agent's re-derivation. Zombie probes
-(stale-epoch calls) were fenced 1500/1500 under the log
-condition.
+were fenced 1500/1500 under the log condition.
 
 \subsection{Q3: LLM-driven validation}
 
@@ -1193,14 +1163,12 @@ and magnitudes. 60/60 SIGKILLs delivered, 0 missed, 0 recovery
 failures; 180/180 zombie probes fenced (90 HTTP + 90 file).
 
 \emph{v2: production-shaped graph.} A ``research assistant''
-StateGraph with conditional supervisor routing
-(\texttt{add\_conditional\_edges}), \texttt{Send}-based parallel
-fan-out to compiled worker subgraphs with reducer fan-in, and a
-framework retry loop with real backoff sleep---plus three new
-crash windows: \emph{mid-fan-out} partial completion (the
-scatter-gather case: some workers committed, others in flight),
-\emph{post-branch-decision} pre-tool (a liveness check: nothing
-committed yet), and \emph{mid-retry-backoff} (claim exists,
+StateGraph with conditional supervisor routing, \texttt{Send}-based
+parallel fan-out to worker subgraphs with reducer fan-in, and a
+framework retry loop with real backoff---plus three new crash
+windows: \emph{mid-fan-out} partial completion (some workers
+committed, others in flight), \emph{post-branch-decision} pre-tool
+(a liveness check), and \emph{mid-retry-backoff} (claim exists,
 uncommitted). Per-branch durable claims, epoch fencing, and
 log-fenced branch-state throughout. 180 episodes per campaign
 (60/condition), 0 missed crashes, 0 recovery failures, zombie
@@ -1255,28 +1223,22 @@ Determ.\ keys & 0/32 & 0/13 & 0/15 & 0/60 \\
 
 The real-LLM supervisor (gpt-4o-mini) decides round-1 routing
 only and never sees the raw claim log; deterministic
-reconciliation runs first in both generations, and the model
-plans from reconciled remaining work. Each LLM campaign runs 180 episodes (60/condition); the
-supervisor emits one round-1 routing decision per generation,
-and 34 post-branch episodes decide in both the fresh and the
-recovery generation (cross-generation consistency 34/34),
-for 214 total round-1 decisions per campaign. The uniform
-campaign (temperature 0) produced a degenerate 214/214
-\texttt{fan\_out} split---the prompt showed identical evidence
-every episode, so fan-out was the only rational answer at any
-temperature. After a prompt fix (seeded per-episode evidence
-profiles, deterministic across fresh/recovery generations via a
-domain-separated RNG, plus a cost-aware decision rule: fan-out
-costs 6 more non-idempotent effects and delays resolution),
-the mixed campaign produced a genuine 135-\texttt{escalate} /
-79-\texttt{fan\_out} split with 0 fallbacks (\$0.0117 total
-spend): the protocol holds under a real mixed routing
-distribution, not just a uniform one.
+reconciliation runs first in both generations. Each LLM campaign
+runs 180 episodes (60/condition) for 214 round-1 decisions
+(34 post-branch episodes decide in both generations;
+cross-generation consistency 34/34). The uniform campaign
+(temperature 0) degenerated to 214/214 \texttt{fan\_out}---the
+prompt showed identical evidence every episode. After a prompt
+fix (seeded per-episode evidence profiles plus a cost-aware
+rule), the mixed campaign produced a genuine
+135-\texttt{escalate} / 79-\texttt{fan\_out} split with 0
+fallbacks (\$0.0117): the protocol holds under a real mixed
+routing distribution, not just a uniform one.
 
 Notably, deterministic keys hold at 0.0000 in v2 (unlike v1's
 0.2333) because v2's branch identities are structural and
-stable across recovery---an informative contrast that sharpens
-the paper's claim, discussed in \S\ref{sec:discussion}.
+stable across recovery---an informative contrast sharpening
+the paper's claim (\S\ref{sec:discussion}).
 
 \emph{Overhead.} Claim-log write latency is the per-step
 wall-clock cost of the write path: one fsync'd JSONL append per
@@ -1291,8 +1253,10 @@ Against multi-second LLM tool calls this is on the order of 1\%,
 but we report the absolute latencies because the ratio depends
 on the tool-call profile. Log-scale microbenchmark E3b
 (\texttt{src/e3b\_log\_scale.py}; 100/1{,}000/10{,}000 claims):
-append p50 is flat at $\sim$0.03\,ms (O(1) append-only
-discipline holds); \textsc{find\_by\_identity} is a linear scan
+append p50 is flat at $\sim$0.03\,ms \emph{including} a
+per-record \texttt{fsync} (\texttt{ClaimLog.append\_claim}
+fsyncs every record; p99 of 8--20\,ms is the fsync latency
+tail)---O(1) append-only discipline holds); \textsc{find\_by\_identity} is a linear scan
 at 6.6\,ms $\to$ 16.8\,ms $\to$ 850\,ms---O($n$), an honest
 scaling bottleneck: production use needs an index (follow-up
 work), though all experiments here stay far below the knee.
@@ -1339,6 +1303,7 @@ scoring is against the tool server's append-only ledger
 
 \begin{table*}[t]
 \centering
+\footnotesize
 \caption{Boundary experiments: baseline, identity/key rule,
 injected fault, and outcomes. ``det'' = deterministic keys
 re-derived at retry time; ``wal'' = write-ahead claim log.
@@ -1352,120 +1317,108 @@ exactly once.}
 Exp.\ & Baseline & Identity/key rule & Injected fault &
 Eps & Dup.\ eps & Missing/ep & Completion \\
 \midrule
-E1 & native (SqliteSaver) & deterministic keys, no claim log; recovery = framework checkpointer resume from last superstep & SIGKILL at retry\_backoff / mid\_fanout / post\_branch (26/16/18) & 60 & 0 & 0.00 & 60/60 \\
+E1 & native (SqliteSaver) & deterministic keys, no claim log; checkpointer resume from last superstep & SIGKILL at retry\_backoff / mid\_fanout / post\_branch (26/16/18) & 60 & 0 & 0.00 & 60/60 \\
 E2a & det\_shift & positional keys $(\mathit{wid}, i, \mathit{action})$; recovery rotates branch indices & plan-shift replan on recovery & 60 & 46 & 0.77 & 14/60 \\
 E2a & wal & claim-log identities; \texttt{find\_by\_identity} key reuse & same & 60 & 0 & 0.00 & 60/60 \\
 E2b & det\_content & content-hash keys $H(\mathit{action}, \mathit{args})$; recovery rewords targets & invertible paraphrase on recovery & 60 & 46 & 0.00 & 14/60 \\
 E2b & wal & claim-log identities; canonicalized lookup & same & 60 & 0 & 0.00 & 60/60 \\
 E3 & wal & claim log & fan-out $\in\{2,4,8\}$; log-length $\{10^2,10^3,10^4\}$; concurrency $K\in\{1,4,16\}$ & 90+ & 0 & 0.00 & all \\
 E4 & no\_fencing & claim log kept, epoch fencing removed & zombie writer (surviving pre-crash process, stale epoch) & 200 & 102 & --- & --- \\
-E5 & wal/det/native & paired seed-matched episodes & none (paired timing; episodes include crash + recovery) & 60 & 0 & 0.00 & 60/60 \\
+E5 & wal/det/native & paired seed-matched episodes & in-window crash (paired timing; episodes include crash + recovery) & 60 & 0 & 0.00 & 60/60 \\
 \bottomrule
 \end{tabular}
 \end{table*}
 
 \emph{E1: native persistence.} The v2 agent graph is rebuilt on
-LangGraph's \texttt{SqliteSaver} checkpointer with no claim log
-and no manual recovery node. The fresh generation runs
-\texttt{invoke} with thread state; on \texttt{SIGKILL} the
-recovery re-\texttt{invoke}s with \texttt{None} input and the
-same thread id, letting the checkpointer resume from the last
-committed superstep---the framework's native path. Durable
-identities are the same deterministic keys as the
-\texttt{det} condition; the idempotent receiver contract is
-unchanged. Task boundaries are the framework's superstep
-boundaries (one graph-node execution per checkpoint write);
-key persistence is the checkpointer's own durable state, not a
-separate record. Crash schedule and receiver are matched to
-the WAL condition. Result: 60/60 exactly-once, 0 duplicates.
+LangGraph's \texttt{SqliteSaver} with no claim log and no manual
+recovery node: the fresh generation runs \texttt{invoke} with thread
+state, and on \texttt{SIGKILL} the recovery re-\texttt{invoke}s with
+\texttt{None} input and the same thread id, letting the checkpointer
+resume from the last committed superstep---the framework's native
+path. Durable identities are the same deterministic keys as the
+\texttt{det} condition and the receiver contract is unchanged; task
+boundaries are the framework's superstep boundaries and key
+persistence is the checkpointer's own durable state. Crash schedule
+and receiver are matched to the WAL condition. Result: 60/60
+exactly-once, 0 duplicates.
 
-\emph{E2: identity shift.} E2a (positional): the recovery
-generation rotates branch dispatch positions
-(b0$\to$b2, b1$\to$b0, b2$\to$b1), so positional deterministic
-keys differ from the pre-crash keys for the same logical
-effect; some rotated keys collide with other operations'
-committed keys. E2b (content): the recovery generation rewords
-tool targets through a deterministic invertible paraphrase
-(\texttt{finding-r0-b0} $\to$ \texttt{finding\_r0\_b0\_rpl}),
-so content-hash keys differ; scoring canonicalizes targets to
-the reword-invariant business identity. In both, the WAL
-recognizes the original identity through the durable claim
-record---\texttt{find\_by\_identity} on the stored
-$(\mathit{action}, \mathit{target}, \mathit{occurrence})$
-(E2b additionally canonicalizes the lookup target)---and
-replays the \emph{original} key, never re-deriving. Result:
-\texttt{det\_shift} 46/60 duplicate episodes with 0.77
-duplicates and 0.77 missing effects per episode (collision and
+\emph{E2: identity shift.} E2a (positional): recovery rotates branch
+dispatch positions (b0$\to$b2, b1$\to$b0, b2$\to$b1), so positional
+deterministic keys differ from the pre-crash keys for the same
+logical effect, and some rotated keys collide with other
+operations' committed keys. E2b (content): recovery rewords tool
+targets through a deterministic invertible paraphrase
+(\texttt{finding-r0-b0} $\to$ \texttt{finding\_r0\_b0\_rpl}), so
+content-hash keys differ; scoring canonicalizes targets to the
+reword-invariant business identity. In both, the WAL recognizes the
+original identity through the durable claim record---\texttt{find\_by\_identity}
+on the stored $(\mathit{action}, \mathit{target},
+\mathit{occurrence})$ (E2b additionally canonicalizes the lookup
+target)---and replays the \emph{original} key, never re-deriving.
+Result: \texttt{det\_shift} 46/60 duplicate episodes (0.77
+duplicates and 0.77 missing effects per episode: collision and
 re-derivation modes); \texttt{det\_content} 46/60 duplicate
-episodes with 92 excess commits and 0 missing; WAL 60/60 in
-both. E2 evaluates the \emph{combined} design---canonicalized
-identity lookup plus durable key reuse---against hashing
-mutable text; it does not isolate the marginal contribution of
-the log itself, and we do not attribute the entire gap to the
-log alone. The E1 result (native persistence ties the WAL at
-60/60) remains the boundary: where stable identities survive
-recovery, keys alone suffice and no new record is needed.
+episodes (92 excess commits, 0 missing); WAL 60/60 in both. E2
+evaluates the \emph{combined} design---canonicalized identity
+lookup plus durable key reuse---against hashing mutable text; it
+does not isolate the marginal contribution of the log itself, and
+we do not attribute the entire gap to the log alone. The E1 result
+remains the boundary: where stable identities survive recovery,
+keys alone suffice and no new record is needed.
 
 \emph{E4: fencing trace.} A 200-episode re-run of the sandbox
 \texttt{no\_fencing} condition (claim log kept, epoch fencing
-removed), with each duplicate-causing call classified:
-(a)~delayed same-key recommit vs.\ (b)~surviving writer minting
-a fresh key at a stale epoch. Result: 102/200 episodes with
-duplicates; 102/102 offending calls were class~(b), 0 were
-class~(a). A representative trace (episode~0): the fresh
-generation commits \texttt{send\_email} to
+removed), classifying each duplicate-causing call as (a)~delayed
+same-key recommit vs.\ (b)~surviving writer minting a fresh key at
+a stale epoch. Result: 102/200 episodes with duplicates; 102/102
+offending calls were class~(b), 0 class~(a). Representative trace
+(episode~0): the fresh generation commits \texttt{send\_email} to
 \texttt{customer-1042-s3} under key
-\texttt{det:wf-0776\ldots:3:send\_email} at epoch~0; the
-recovery generation replays the same key at epoch~1 and is
-correctly suppressed (\texttt{duplicate\_suppressed}); the
-surviving zombie---the pre-crash instance, never killed
-mid-fan-out and never observing the
-fence bump---retries the same semantic effect with a fresh
-content-hash key \texttt{ch:33428fa0\ldots} at stale epoch~0,
+\texttt{det:wf-0776\ldots:3:send\_email} at epoch~0; the recovery
+generation replays the same key at epoch~1 and is correctly
+suppressed (\texttt{duplicate\_suppressed}); the surviving
+zombie---the pre-crash instance, never killed mid-fan-out and never
+observing the fence bump---retries the same semantic effect with a
+fresh content-hash key \texttt{ch:33428fa0\ldots} at stale epoch~0,
 which the receiver accepts because the key is unseen. The
-receiver's idempotent deduplication is not at fault; the
-missing piece is fencing the stale generation. Note this is a
-\emph{separate fault model} from the main crash-stop
-evaluation: overlapping generations (a pre-crash process that
-survives) rather than a clean kill. The ablation's zombie
-writer is the same model, made explicit.
+receiver's deduplication is not at fault; the missing piece is
+fencing the stale generation. This is a \emph{separate fault
+model} from the main crash-stop evaluation: overlapping
+generations rather than a clean kill.
 
 \emph{E5: paired timing.} 20 episodes $\times$ 3 conditions
-(wal/native/deterministic), seed-matched so each episode runs
-the identical workflow under all three conditions (pairing
-verified: 0/60 plan-seed mismatches). Per-episode wall-clock
-\texttt{elapsed\_s}; reported intervals are 95\% confidence
-intervals on the \emph{paired differences}
-(mean $\pm$ 1.96$\times$SE, $n{=}20$). Each episode includes an
-in-window crash and full recovery: end-to-end is wall clock
-from crash through recovery completion, while the recovery row
-is the instrumented recovery-subprocess interval (reconciliation
+(wal/native/deterministic), seed-matched (pairing verified: 0/60
+mismatches), each with an in-window crash and full recovery.
+Reported intervals are 95\% CIs on the \emph{paired differences}
+(mean $\pm$ 1.96$\times$SE, $n{=}20$); end-to-end is wall clock
+from crash through recovery completion, while the recovery row is
+the instrumented recovery-subprocess interval (reconciliation
 start through checkpoint advance) within the same episodes.
-End-to-end: wal vs.\
-deterministic $+$0.38\,s (95\% CI $[-$0.08, $+$0.83]);
-wal vs.\ native $-$1.92\,s (95\% CI $[-$2.96, $-$0.88]).
-The wal--deterministic interval \emph{includes zero and extends
-to $+$0.83\,s}: it is inconclusive about a difference and does
-\emph{not} establish negligible claim-log overhead---we report
-the interval, not the claim. Recovery time: wal $-$0.14\,s vs.\
-deterministic (CI $[-$0.53, $+$0.26]); wal $-$1.46\,s vs.\
-native (CI $[-$2.24, $-$0.67]). All 60 paired episodes: 0
-duplicates, 60/60 exactly-once.
+End-to-end: wal vs.\ deterministic $+$0.38\,s (95\% CI
+[$-$0.08, $+$0.83]); wal vs.\ native $-$1.92\,s (95\% CI
+[$-$2.96, $-$0.88]). The wal--deterministic interval
+\emph{includes zero and extends to $+$0.83\,s}: it is inconclusive
+about a difference and does \emph{not} establish negligible
+claim-log overhead---we report the interval, not the claim.
+Recovery time: wal $-$0.14\,s vs.\ deterministic (CI
+[$-$0.53, $+$0.26]); wal $-$1.46\,s vs.\ native (CI
+[$-$2.24, $-$0.67]). All 60 paired episodes: 0 duplicates,
+60/60 exactly-once.
 
 \subsection{Threats to validity}
 
 \emph{Construct.} Our duplicate metric counts ledger commits
 beyond the first per semantic effect; the ledger is the tool
-server's own append-only record, independent of the harness
-under test. \emph{Internal.} Crash timing is seeded and the
-recovery nondeterminism (reword/shift rates) is modeled rather
-than observed in the wild; different rates would shift the
-keys-alone numbers but not the WAL result, which is
-independent of re-derivation by construction (Theorem~2).
+server's own append-only record, independent of the harness.
+\emph{Internal.} Crash timing is seeded and recovery
+nondeterminism (reword/shift rates) is modeled rather than
+observed in the wild; different rates would shift the keys-alone
+numbers but not the WAL result, which is independent of
+re-derivation by construction (Theorem~2).
 \emph{External.} All crashes are single-crash, crash-stop, and
 harness-side; multi-crash episodes, tool-side crashes, and
 Byzantine harnesses are out of scope. Both validated LLMs are
-from one vendor. The production port uses one framework
+from one vendor, and the production port uses one framework
 (LangGraph); the mechanism is framework-agnostic by design
 (harness-enforced claims, tool-side idempotent receivers),
 but other frameworks are untested.
@@ -1476,18 +1429,14 @@ but other frameworks are untested.
 Every protocol piece must earn its place. A 1,500
 episodes/condition component ablation adds a second,
 \emph{explicitly separate} fault model---the \emph{zombie
-writer}: with probability 0.5, the pre-crash process instance
-is \emph{not} killed. It survives into the post-recovery
-generation and retries its in-flight step with its stale
-epoch, re-deriving the call the way a stale at-least-once
-agent would---a fresh content-hash key over its (possibly
-reworded) arguments, i.e., a key from a keyspace the new
-generation never saw. The tool's idempotent receiver cannot
+writer} described in E4 above: with probability 0.5, the pre-crash
+process instance is \emph{not} killed and retries its in-flight
+step with its stale epoch, minting a fresh content-hash key the
+new generation never saw. The tool's idempotent receiver cannot
 suppress it (unseen key); only the epoch fence rejects it.
 This is overlapping generations, not the crash-stop fault of
-\S\ref{sec:formal} (where the killed process is gone); we
-evaluate it separately because production kills are not always
-clean and the fencing mechanism exists precisely for the
+\S\ref{sec:formal}; we evaluate it separately because production
+kills are not always clean and fencing exists precisely for the
 unclean case. Table~\ref{tab:ablation} gives the results:
 
 \begin{table}[ht]
@@ -1538,26 +1487,22 @@ on the agent's re-synthesis behavior, the plan structure, and
 the retry path: precisely the things that vary across
 deployments and model versions.
 
-This is why Theorem~1 matters beyond the formalism: it says
-the boundary is not an artifact of our two key schemes but a
-property of \emph{retry-time derivations from mutable inputs}
-under unconstrained re-synthesis. A practitioner reading our v2
-result (``deterministic keys work here'') might conclude keys
-suffice; E2a/E2b and the theorem together say that conclusion
-does not transfer across the identity-stability boundary---it
-holds only while identities survive recovery, which is not a
-property the harness can assume. The write-ahead claim log is
-the mechanism that makes recovery independent of which side of
-the boundary a given deployment lands on.
-
-A second observation: the protocol is \emph{planner-agnostic}
-in practice, not just in theory. Scripted, uniform-LLM, and
-mixed-LLM supervisors produce headline-identical numbers in
-all three conditions, exactly as the fault model predicts:
-the fault class is harness-side, and routing sits above the
-crash-consistency layer. This is a feature, not a limitation
-of the evaluation---it means the mechanism composes with
-arbitrary agent cognition rather than depending on it.
+This is why Theorem~1 matters beyond the formalism: the boundary
+is not an artifact of our two key schemes but a property of
+\emph{retry-time derivations from mutable inputs} under
+unconstrained re-synthesis. A practitioner reading our v2 result
+(``deterministic keys work here'') might conclude keys suffice;
+E2a/E2b and the theorem together say that conclusion does not
+transfer across the identity-stability boundary. The write-ahead
+claim log makes recovery independent of which side of the boundary
+a deployment lands on---provided the recovered agent assigns the
+correct logical identity (occurrence) to each retry, as Theorem~2
+requires. The protocol is also \emph{planner-agnostic}:
+scripted, uniform-LLM, and mixed-LLM supervisors produce
+headline-identical numbers, as the fault model predicts---the fault
+class is harness-side, and the mechanism composes with arbitrary
+agent cognition \emph{that honors the identity contract} rather
+than depending on its content.
 
 \section{Limitations}
 \label{sec:limitations}
@@ -1574,8 +1519,7 @@ re-emission-aware recovery prompting remains future work.
 safety transfers by construction (WAL+fencing), but cross-lab
 generalization is untested. \textbf{Uniform-route limitation
 and fix:} the first LLM-supervisor campaign degenerated to
-214/214 \texttt{fan\_out} decisions (180 episodes, 214 round-1
-decisions) because the prompt showed identical
+214/214 \texttt{fan\_out} decisions (180 episodes) because the prompt showed identical
 evidence every episode; the fixed prompt (seeded evidence
 profiles + cost-aware rule) produced the genuine 135/79 mixed
 split under which the protocol still holds---we report both,
@@ -1636,15 +1580,6 @@ not an optimization; for LLM agents, durable write-ahead
 identity information is the minimal requirement that makes
 duplicate-free recovery possible under our recovery-information
 model, and our claim log is a sufficient mechanism.
-
-\section*{Artifact Availability}
-The code, experiment drivers, and full result traces supporting
-this paper are archived at
-\url{https://github.com/batistado/a1-crash-consistent-effects}
-and the crash-recovery datasets at
-\url{https://huggingface.co/datasets/batistado/a1-crash-recovery-results}.
-Both are currently private and will be made publicly available
-upon publication.
 
 \begin{thebibliography}{00}
 

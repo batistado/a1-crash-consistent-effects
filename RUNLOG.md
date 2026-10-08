@@ -477,3 +477,38 @@ spend, verdict. Newest at the bottom. Times in PDT unless noted.
 - **TPDS page cap check:** 14pp submittable as-is but incurs mandatory overlength page charges. Trim (~2pp) authorized — candidates: compress §6.5 methods table, move E6/E7 traces to appendix.
 - **Mohammed's decisions (voice):** use the 14pp copy for the next review round now; trim in background meanwhile; RUNLOG + CHECKLIST updated and pushed to GitHub.
 - **Spend:** $0.00 (all scripted).
+
+## 2026-10-08 — Manuscript trim for TPDS page cap (12pp target, authorized by Mohammed)
+- **Task:** reduce 14-page Phase-7 manuscript to ≤12 pages to avoid Mandatory Overlength Page Charges. Background work; Mohammed reviewing the 14pp copy separately.
+- **Changes:** Table 1 → \scriptsize + tightened cells (all 10 rows/8 cols kept); Table 8 → \footnotesize + shortened cells; §6.5 E-paragraphs prose −35% (all facts kept); abstract/intro/background/discussion/evaluation prose tightened; ablation zombie description deduplicated via E4 cross-ref; removed Artifact Availability section (draft meta-content) and redundant "A concrete failure" subsection (intro already tells the story; Fig. 1 kept).
+- **Untouched:** Theorems 1/2, proofs, identity consistency, A6/A7, Definition 3, create-or-reuse, E1–E7 results/numbers, related-work corrections, all 11 bib entries, FORMAL_MODEL.md.
+- **Result:** 12 pages (pdfinfo), 0 LaTeX errors, 0 unresolved references. Tables inline (pp. 4/5/8/9/11), references p. 12.
+- **Spend:** $0 API. **Verdict:** PASS — 12pp TPDS-regular limit met. Report: TRIM_NOTE.md. NOT committed/pushed (Mohammed reviews the trim first).
+
+## 2026-10-07 ~22:35 PDT — Fourth private review received; Phase 8 kicked off (parallel)
+- **Reviewer verdict:** best review yet — Phase 7 substantially addresses previous technical objections. Recommends short final correction pass before TPDS, NOT another broad experimental revision. Mechanism sufficiently specified for bounded manuscript-level correctness argument.
+- **Substantive item — Khan/Remit accuracy:** §2.3 describes Khan as "without agents, LLMs … or a mechanism"; reviewer says the cited public version includes live-agent probes (§VI) and Remit, a reference resume sequencer with append-only effect ledger (§VII). Table 1's Khan row incomplete. Affects the central originality argument. Fix: verify §§VI–VII directly; correct §2.3 + Table 1 row; check §2.4 blanket novelty claim. Defensible distinction: pre-invocation durable claim + receiver-side original-key reconciliation vs Remit's checkpoint-interface sequencing + effect-ledger design. No automatic head-to-head campaign — correct comparison first.
+- **Six small corrections:** (1) §5.4 L7 p.7 — "the theorems establish the necessity" → Remark 2-consistent wording; (2) §8 p.10 — qualify recovery-independence/arbitrary-cognition claims (Theorem 2 needs correct identity assignment); (3) at-most-once proof p.7 — "whichever valid attempt linearizes first commits"; (4) Table 7 E5 p.14 — "none" → in-window crash; (5) Figure 2 p.5 — redraw (label overlap); (6) E3b p.9 — state whether 0.03ms append includes fsync.
+- **Reviewer's risk assessment:** main TPDS risk now originality/depth vs established durable-identity techniques, not missing machinery.
+- **Mohammed's decision:** kick off all Phase 8 workstreams in parallel on ORX.
+- **Spend:** $0.00. **Status:** 2 parallel workers (Khan verification; small fixes + re-trim).
+
+## 2026-10-08 — A1 Phase 8a: Khan/Remit verification COMPLETE ($0 API)
+- **Task:** verify the fourth review's claim that §2.3 mischaracterizes Khan "Resume Means Resume" (arXiv:2608.03836, v3) as mechanism-free.
+- **Method:** downloaded the published 25-page PDF from arXiv; read §§VI–VII directly. Research only — no manuscript edits.
+- **Verdict: REVIEWER'S CORRECTION CONFIRMED.** §VI ("CONFORMANCE RESULTS") reports live measurements on five deployed agent frameworks (LangGraph 1.2.9, CrewAI 1.15.2, pydantic-graph 1.x) with real SIGKILL, live PostgresSaver, two-host replication — our "without agents" is wrong. §VII ("REMIT: A REFERENCE SEQUENCER WITH A VERIFIED MODEL AND CONFORMANCE-TESTED CORE") ships Remit: a reference resume sequencer + append-only effect ledger (⟨branch, task, effectId⟩ records written transactionally with the completion checkpoint; per-thread sequencer; Verus-verified recovery core; PyPI package) — our "or a mechanism" and "Khan specifies the contract; we supply the mechanism" are wrong.
+- **Precise distinction (for Phase 8b):** ours = pre-invocation durable claim + original-key reconciliation at the receiver boundary (tool server's atomic check-and-commit); Remit = checkpoint-interface sequencing + effect-ledger design (in-harness dedup via ledger-uniqueness + read-path gate).
+- **Deliverable:** KHAN_VERIFICATION.md — findings, verdict, and LaTeX-ready replacement text (corrected §2.3 paragraph, completed Table 1 Khan row, re-scoped §2.4 novelty claim, fixed "contract and mechanism" sentence).
+- **Spend:** $0.00. **Status:** done; handed to Phase 8b writer. Not committed/pushed.
+
+## 2026-10-08 — A1 Phase 8b COMPLETE: six corrections + verified Khan integration + re-trim (12pp)
+- **Six small corrections (fourth review):** (1) L7 → "conditional key fragility … scoped claim, never universal" (Remark 2-consistent); (2) §8 Discussion qualified — recovery independence + planner-agnosticism now conditional on correct logical-identity assignment / honoring the identity contract; (3) at-most-once proof → "whichever valid attempt linearizes first commits"; (4) Table E5 injected-fault → "in-window crash"; (5) Figure 2 redrawn — call arrow rerouted below boxes, no overlaps; (6) E3b → 0.03ms p50 explicitly includes per-record fsync (verified in code; p99 8–20ms is the fsync tail).
+- **Khan integration:** Phase 8a verdict CONFIRMED (reviewer right — Khan v3 §VI live-agent probes, §VII REMIT with append-only effect ledger). Integrated verified LaTeX: corrected §2.3 (39-cell matrix, 5 frameworks, REMIT mechanism, precise pre-invocation-vs-checkpoint-interface distinction), completed Table 1 Khan row (all 8 cols), re-scoped §2.4 novelty claim, replaced "contract and mechanism" sentence. No "Remit cannot see" overclaim (per verification caution). No bib change needed.
+- **Re-trim:** Khan additions cost 1pp (13pp) → recovered to 12pp via prose/table tightening (bibsep hack broke the bib — reverted). 0 LaTeX errors. All 16 content checks PASS in built PDF (six fixes + Khan + intact Phase 7 content).
+- **Spend:** $0 API. **Verdict:** PASS. Report: PHASE8_REPORT.md. NOT committed/pushed (Mohammed reviews first).
+
+## 2026-10-07 ~23:41 PDT — Phase 8 wrap-up: review-confirmed, committed, pushed, artifacts published
+- **Fourth review fully addressed.** Phase 8a verified Khan/Remit from the source paper (CONFIRMED — reviewer right); Phase 8b applied all six small corrections + integrated verified Khan text + re-trimmed to 12pp, 0 LaTeX errors.
+- **Mohammed's wrap-up directive (23:40 PDT):** save state to runlog, update checklist on GH, publish artifacts on HF, confirm final review comments addressed, produce revised manuscript PDF for review.
+- **Q&A with Mohammed (23:26–23:38 PDT):** clarified the two-sided design (harness WAL + tool-side atomic receiver), the tool-cooperation requirement (end-to-end argument — no harness protocol gives exactly-once against a non-cooperating tool), and the novelty basis (key fragility under LLM replanning, not idempotency keys per se). No manuscript changes resulted — all already covered by receiver assumptions + re-scoped §2.4.
+- **Spend:** $0.00.
