@@ -4,15 +4,11 @@ One file, updated in place. Newest status goes at the top of each section.
 The append-only narrative lives in `RUNLOG.md`. Evidence files (results JSONs,
 reports) are referenced, not duplicated here.
 
-## Current status — 2026-10-07 ~19:45 PDT — ALL PHASE-4 EXPERIMENTS COMPLETE
-- E1 (native-persistence baseline) DONE: 60 eps, dup_rate 0.0000, exactly-once 1.000 — matches WAL. Boundary result: native persistence + stable identities suffices; WAL's value is the identity-shift case.
-- E2a (positional identity-shift) DONE: det_shift 60 eps → dup-ep rate 0.7667 (46/60), eo 0.2333, plus 0.77 missing/ep (cross-operation key collisions); wal 60 eps → 0.0000/1.0000; baseline 0.80/0.20. PASS.
-- E2b (content identity-shift) DONE: det_content 60 eps → dup-ep rate 0.7667 (46/60), eo 0.2333, 0 missing; wal 60 eps → 0.0000/1.0000. PASS. (Scoring canonicalizes reworded targets; committed in harness.)
-- E3a (fan-out 2/4/8, wal) DONE (sibling): 30 eps each, 0.0000 dup / 1.0000 eo at all fan-outs.
-- E3b (claim-log length microbench) DONE: append p50 ~0.03 ms flat; find_by_identity linear scan — 0.6 ms (100) → 33 ms (1k) → 373 ms (10k). O(n) lookup is the scaling bottleneck; indexing is follow-up.
-- E3c (concurrent workflows, shared server) DONE 2026-10-08: K=1 689 ops/s p50 1.3 ms; K=4 636 ops/s p50 5.4 ms; K=16 310 ops/s p50 11.2 ms, p99 1055 ms. PASS with caveat (single-threaded server serializes at K=16).
-- E4 (fencing trace) DONE: 200 eps, dup-episode rate 0.51, 102/102 offending calls class b (surviving-zombie fresh keys, epoch 0; recovery's same-key retry correctly suppressed). Causal evidence the reviewer asked for.
-- Phases 1–3 (writing, theory, protocol spec) NOT STARTED. Phase 5 pending Phase 4.
+## Current status — 2026-10-07 ~19:53 PDT
+- Phases 1–3 revision DRAFTS complete and PUSHED (8b6d9e9): PHASE1_REVISIONS.md (750 lines, incl. 4 corrected bib entries + 2 new discrepancies found: API spend $0.1137 not "under $0.10"; paired e2e latency never measured), PHASE2_REVISIONS.md (Theorem 1 narrowed, Theorem 2 split 2a/2b/2c, 2.2 → option (b) recommended), PHASE3_REVISIONS.md (protocol spec + 5-item honest gap register).
+- Phase 5 (manuscript rewrite + re-review) RUNNING: applying all revisions to main.tex/FORMAL_MODEL.md, 2.2 decision = option (b), paired-timing measurement, PDF rebuild, self re-review vs reviewer feedback.
+- Next: review Phase 5 output, then resubmit decision.
+
 
 ## Reviewer feedback summary (2026-10-07, research reviewer LLM, private pre-submission)
 Verdict: NOT READY for TPDS — claims exceed evidence; empirical foundation useful.

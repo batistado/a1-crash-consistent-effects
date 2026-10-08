@@ -422,3 +422,8 @@ spend, verdict. Newest at the bottom. Times in PDT unless noted.
 - **1.9 Algorithm:** "step~4" → "line~7" (verified); float-specifier warning fix; PDF visual pass flagged for stranded headings.
 - **1.10 Overhead:** "~1% tax" replaced with measured numbers (E2b p50 21.5/p99 62.7ms; E3b append O(1) ~0.03ms, find O(n) 850ms@10k; E3c 688/636/310 ops/s, p99 1055ms@K=16); **honest gap flagged: paired end-to-end latency + recovery time were never measured** — recommend small paired-timing run or Limitations entry.
 - **Spend:** $0 (writing + web verification only). **Verdict:** DRAFT COMPLETE — ready for merge review after Phases 2/3 land. Not committed/pushed per instructions.
+
+## 2026-10-07 ~19:53 PDT — A1 phases 1–3 drafts checked in + pushed; Phase 5 launched
+- Committed PHASE1_REVISIONS.md + PHASE2_REVISIONS.md + PHASE3_REVISIONS.md (+ RUNLOG/checklist) as 8b6d9e9; pushed to origin main, verified (remote = 8b6d9e9).
+- Phase 5 (manuscript rewrite + re-review) dispatched: applies all revisions to main.tex/FORMAL_MODEL.md, 2.2 = option (b) per drafter recommendation (reversible), paired-timing measurement for the e2e-latency gap, PDF rebuild, honest self re-review vs reviewer feedback, then commit + push.
+- Spend: $0 API.
