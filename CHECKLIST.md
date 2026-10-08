@@ -1,0 +1,62 @@
+# A1 Checklist — the single living checklist (TPDS revision)
+
+One file, updated in place. Newest status goes at the top of each section.
+The append-only narrative lives in `RUNLOG.md`. Evidence files (results JSONs,
+reports) are referenced, not duplicated here.
+
+## Current status — 2026-10-07 ~19:10 PDT
+- E1 (native-persistence baseline) DONE: 60 eps, dup_rate 0.0000, exactly-once 1.000 — matches WAL. Boundary result: native persistence + stable identities suffices; WAL's value is the identity-shift case.
+- E4 (fencing trace) DONE: 200 eps, dup-episode rate 0.51, 102/102 offending calls class b (surviving-zombie fresh keys, epoch 0; recovery's same-key retry correctly suppressed). Causal evidence the reviewer asked for.
+- E2a (positional identity-shift) RUNNING: 57/60 eps, det_shift already showing duplicates (dup=1, miss=1 on recent eps).
+- E2b (content identity-shift) RUNNING: 41/60 eps, det_content showing duplicates (dup=2).
+- E3 (scale: fan-out 2/4/8, concurrent, log length) RUNNING: early (11–12 eps per config).
+- Phases 1–3 (writing, theory, protocol spec) NOT STARTED. Phase 5 pending Phase 4.
+
+## Reviewer feedback summary (2026-10-07, research reviewer LLM, private pre-submission)
+Verdict: NOT READY for TPDS — claims exceed evidence; empirical foundation useful.
+1. Theorem 1 overclaims: proves 2 key schemes fail, not universal insufficiency; claim-log necessity unproven. → narrow to identity-unstable derivations or prove the information requirement.
+2. Theorem 2 conflates safety (0 duplicates, proven) with completion (66/70, not proven); semantic identity underspecified. → split at-most-once / eventual-commitment / workflow-completion; define logical effect identity.
+3. Strong-baseline gap: v2 deterministic keys tie WAL (0.0000/1.0000); no native-persistence baseline; Temporal comparison too restrictive. → E1 + E2 + scale (E3).
+4. Fencing ablation needs causal mechanism (~49% dups without fencing). → E4 (done, mechanism = surviving-writer fresh keys).
+5. Related-work errors: LogAct DOES discuss crash recovery (§3.2); ACRFence overlap understated; LIMBO 4% attribution overstated; missing RIFL (SOSP 2015) + classical WAL/durable-execution/sagas; "Anonymous" for public authors; wrong titles [1],[2],[3],[6]. → comparison table + bib fixes.
+6. Protocol spec gaps: epoch atomicity, duplicate-call result return, partial JSONL writes, parallel checkpoint frontier, proof inconsistency (Commit exists in-window but proof assumes absent).
+Reporting: safety/completion split everywhere; reconcile 140 vs 210 eps, 214 vs 180 decisions; define duplicate-rate denominators; pin down 20.3 ms overhead; uncertainty bounds (0/60 → 4.87%, 0/1,500 → 0.20%); fix Algorithm 1 refs + LaTeX artifacts.
+Suggested central contribution: "a crash-recovery protocol that preserves tool-operation identities across agent replanning, with explicit receiver assumptions and fault-injection evaluation."
+
+## Phase 1 — Writing / related-work / reporting fixes
+- [ ] 1.1 LogAct characterization corrected (it discusses crash recovery §3.2)
+- [ ] 1.2 ACRFence overlap acknowledged; LIMBO 4% attribution narrowed
+- [ ] 1.3 Add RIFL (SOSP 2015) + classical WAL / durable-execution / sagas citations
+- [ ] 1.4 Bib metadata: fix titles [1],[2],[3]; replace "Anonymous" with public authors [1],[2],[3],[6]
+- [ ] 1.5 Comparison table: fault model × durable records × identity handling × receiver assumptions × fencing × guarantee × evaluation
+- [ ] 1.6 Safety/completion split in abstract, contributions, conclusion, §6
+- [ ] 1.7 Reconcile counts: 140 vs 210 eps; 214 decisions vs 180 eps; duplicate-rate definitions + denominators; 20.3 ms overhead definition
+- [ ] 1.8 Uncertainty bounds: 0/60 → 4.87%, 0/1,500 → 0.20% (one-sided 95%)
+- [ ] 1.9 Fix Algorithm 1 step/line refs; LaTeX artifacts (literal \S, table labels, stranded headings)
+- [ ] 1.10 Overhead: paired end-to-end latency, throughput, recovery time (replace "~1%" estimate)
+
+## Phase 2 — Theory repair
+- [ ] 2.1 Theorem 1: narrow to identity-unstable derivations, or prove the information requirement. Defensible: "Idempotency keys derived from mutable argument text or unstable plan positions cannot guarantee duplicate suppression across all admissible recovery replans."
+- [ ] 2.2 Claim-log necessity: prove necessary or describe as sufficient (durable op table could suffice)
+- [ ] 2.3 Theorem 2: define logical effect identity (distinguish legitimate repeats; recognize equivalent retries)
+- [ ] 2.4 Theorem 2: split (a) at-most-once per durable claim identity, (b) eventual commitment under progress assumptions, (c) workflow completion
+- [ ] 2.5 Fix proof inconsistency: split cases at Claim durability / tool commitment / Commit durability / checkpoint durability
+
+## Phase 3 — Protocol specification
+- [ ] 3.1 Epoch acquisition, ownership, atomic registration; epoch recovery/increase atomicity
+- [ ] 3.2 Duplicate-call result return (original results for downstream use)
+- [ ] 3.3 Partially written JSONL records: detection + handling
+- [ ] 3.4 Parallel execution: checkpoint frontier with gaps/dependencies; concurrent equivalent claims; parallel completion frontier
+
+## Phase 4 — Experiments (designs condensed; full detail in git history)
+- [x] E1 — Native-persistence baseline: LangGraph SqliteSaver + deterministic positional keys, no claim log, matched crash schedules, 60 eps. DONE 2026-10-07: dup 0.0000 / exactly-once 1.000. → paper claim becomes the boundary characterization. (`results_e1_native.json`)
+- [ ] E2a — Positional identity-shift (RUNNING, 57/60): recovery replanning permutes branch indices via seeded permutation; det keys re-derive to new indices → unseen keys → duplicates. WAL reuses original key via find_by_identity. Expect det_shift dups > 0, wal 0.
+- [ ] E2b — Content identity-shift (RUNNING, 41/60): scripted invertible paraphrase of targets across recovery; content-hash keys break, WAL canonicalizes. Expect det_content dups > 0, wal 0.
+- [ ] E3 — Scale (RUNNING, early): fan-out {2,4,8} × 30 eps wal; log-length microbench {100,1k,10k} append + find_by_identity latency; concurrent workflows {1,4,16} × 20 eps. Metrics: dup rate, completion, p50/p99 write latency, e2e latency, recovery time.
+- [x] E4 — Fencing trace (DONE 2026-10-07): 200 eps no-fencing, 0.51 dup-episode rate, 102/102 class b (fresh-key zombie, epoch 0); 0 class a (same-key recommit). Mechanism confirmed. (`results_e4_fencing_trace.json`)
+- Spend: $0 API (all scripted). Fault model: SIGKILL of own harness processes only.
+
+## Phase 5 — Rewrite + re-review
+- [ ] 5.1 Rewrite abstract/contributions/conclusion around the defensible central contribution
+- [ ] 5.2 Full manuscript pass incorporating Phases 1–4; rebuild PDF
+- [ ] 5.3 Second reviewer assessment before TPDS submission
