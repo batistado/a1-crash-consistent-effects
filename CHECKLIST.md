@@ -4,7 +4,20 @@ One file, updated in place. Newest status goes at the top of each section.
 The append-only narrative lives in `RUNLOG.md`. Evidence files (results JSONs,
 reports) are referenced, not duplicated here.
 
-## Current status — 2026-10-08 — Phase 8b COMPLETE (fourth review addressed, 12pp, awaiting Mohammed)
+## Current status — 2026-10-08 ~01:30 PDT — ✅ manuscript APPROVED; integrity checks PASS; release in progress (NOT yet public)
+- Mohammed APPROVED the final Phase 9 manuscript (12pp, 0 LaTeX errors, all reviews addressed).
+- CORRECTION (2026-10-08 ~01:30 PDT): the 00:07 entry below overstated the state — Phase 9 was NOT pushed and neither GitHub nor HF was made public at that time. Actual state then: all local, awaiting pre-submission integrity checks.
+- Pre-submission integrity checks COMPLETE: Paperpal similarity 1% (PASS); IEEE AI disclosure added to manuscript (wording approved by Mohammed), re-trimmed to 12pp, 0 LaTeX errors. Cache-busted final: manuscript/a1-phase9-ai-disclosure-12pp.pdf (verified: 12pp, acknowledgment present).
+- In progress: commit + push Phase 9 → upload Phase 9 artifacts to HF → make GitHub + HF PUBLIC (verify each) → arXiv post (Mohammed's account; endorsement may be needed) → TPDS ScholarOne submission.
+- Cover letter drafted (manuscript/cover-letter-tpds-draft.md); submission metadata ready (manuscript/submission-metadata.md); Word conversion ready (manuscript/a1-phase9-12pp.docx).
+
+## Current status — 2026-10-08 — Phase 9 COMPLETE (fifth review addressed, 12pp, awaiting Mohammed)
+- Fifth review (2026-10-07): substance ready; final typesetting pass only. All 5 items ADDRESSED 2026-10-08: Table 2 wrapped/constrained; Figure 2 redrawn (zero overlaps, verified on PNG); Figure 1 rescaled (no gutter bleed); artifact-availability paragraph restored; "three theorems". Incidental: 3 more spilling tables fixed (tab:llm/v2/crashpoints).
+- Author list finalized per Mohammed: 5-author IEEEtran block (AUTHORS.md) with affiliation superscripts + emails; running head "Syed et al.".
+- 13pp → 12pp via prose tightening only; 0 LaTeX errors; pp. 1, 4–6, 9–12 visually verified. Report: PHASE9_REPORT.md. Share copy: manuscript/a1-phase9-12pp.pdf. NOT committed/pushed (Mohammed reviews first).
+- Next: Mohammed's review → push → TPDS submission.
+
+## Previous status — 2026-10-08 — Phase 8b COMPLETE (fourth review addressed, 12pp, awaiting Mohammed)
 - Fourth review (2026-10-07): best yet — short final pass, no new experiments. Phase 8 ran as 2 parallel workers: 8a Khan verification → CONFIRMED (reviewer right); 8b six small corrections + verified Khan integration + re-trim.
 - 8b DONE 2026-10-08: all six corrections applied + verified in PDF (L7 scoped wording, §8 identity-contract qualification, linearizes-first, E5 in-window crash, Figure 2 redrawn, E3b fsync disclosed); Khan passages replaced with verified text (§2.3, Table 1 row, §2.4 novelty claim, contract/mechanism sentence); 13pp → 12pp, 0 LaTeX errors. Report: PHASE8_REPORT.md. NOT committed/pushed (Mohammed reviews first).
 - Next: Mohammed's review → push → TPDS submission decision.

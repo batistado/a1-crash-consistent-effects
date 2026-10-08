@@ -512,3 +512,31 @@ spend, verdict. Newest at the bottom. Times in PDT unless noted.
 - **Mohammed's wrap-up directive (23:40 PDT):** save state to runlog, update checklist on GH, publish artifacts on HF, confirm final review comments addressed, produce revised manuscript PDF for review.
 - **Q&A with Mohammed (23:26–23:38 PDT):** clarified the two-sided design (harness WAL + tool-side atomic receiver), the tool-cooperation requirement (end-to-end argument — no harness protocol gives exactly-once against a non-cooperating tool), and the novelty basis (key fragility under LLM replanning, not idempotency keys per se). No manuscript changes resulted — all already covered by receiver assumptions + re-scoped §2.4.
 - **Spend:** $0.00.
+
+## 2026-10-08 — A1 Phase 9 COMPLETE: final typesetting pass (fifth review) + author list ($0 API)
+- **Fifth review verdict:** substance ready for TPDS after a final typesetting pass; no new experiments. Four rendering defects + one wording fix.
+- **Fixes:** (1) Table 2 → wrapped p-columns, constrained to \columnwidth (was spilling into right column/§4.2 heading); (2) Figure 2 fully redrawn — call lane, fenced label, reconcile-first (rerouted above boxes), and stale-epochs annotation all separated, zero overlaps; (3) Figure 1 timeline rescaled 1.35→1.15cm (was 9.72cm > columnwidth); (4) artifact-availability paragraph restored after Conclusion (GitHub + HF dataset, private, on request, public on acceptance); (5) §1 "both theorems" → "three theorems".
+- **Incidental:** overfull audit found 3 more spilling tables (tab:llm had a phantom 5th column; tab:v2, tab:crashpoints) — all fixed via \resizebox; verified clean.
+- **Author list (Mohammed's directive):** 5-author IEEEtran block with affiliation superscripts per AUTHORS.md (Syed*/Mountain House; Rentala†/Rahul†/Fremont; Pai‡/Dara‡/Sunnyvale) + emails; running head → "Syed et al."; ORCIDs reserved for submission system.
+- **Page recovery:** 13pp → 12pp via prose tightening only (systems lineage, limitations, LogAct/Khan, conclusion, eval questions); no content removed. 0 LaTeX errors. All pages visually verified via PNG (pp. 1, 4–6, 9–12).
+- **Deliverables:** manuscript/main.tex + main.pdf, manuscript/a1-phase9-12pp.pdf (cache-busted), PHASE9_REPORT.md. NOT committed/pushed (Mohammed reviews first).
+- **Spend:** $0.00. **Verdict:** PASS — ready for Mohammed's pre-submission review.
+
+## 2026-10-08 ~00:07 PDT — MOHAMMED APPROVED the final A1 manuscript; public release + submission authorized
+- **Approval:** Mohammed approved the Phase 9 final manuscript (12pp, 0 LaTeX errors) on voice call.
+- **Phase 9 recap:** all five fifth-review items fixed (Table 2 column constraint, Figure 2 redraw, Figure 1 rescale, artifact availability restored, "three theorems"), 3 incidental spilling tables fixed, five-author block added (Mohammed corresponding author). Verified 12pp.
+- **Directives:** (1) runlog + checklist final update, mark everything done; (2) commit + push Phase 9; (3) make GitHub repo PUBLIC; (4) make Hugging Face dataset PUBLIC (upload Phase 9 artifacts first); (5) start the TPDS submission process.
+- **Spend:** $0.00.
+
+## 2026-10-08 ~00:58 PDT — IEEE AI disclosure added; re-trimmed to 12pp
+- **Mohammed approved** the tightened acknowledgment wording (voice): AI assistants used for drafting/revision under author direction; all research content conceived/verified by authors.
+- **Added** \section*{Acknowledgment} before References. Required re-trim (ack pushed to 13pp): honest prose tightening in Conclusion, Discussion, Limitations, Abstract (~8 lines saved, no content removed). Final: 12pp, 0 LaTeX errors, all content verified in PDF.
+- **Spend:** $0.00. NOT committed/pushed (awaiting Mohammed's review).
+
+## 2026-10-08 ~01:20 PDT — Paperpal plagiarism pre-check: 1% similarity (PASS)
+- **Result reported by Mohammed:** Paperpal similarity detection returned **1%**.
+- **Interpretation:** clean — far below typical IEEE/iThenticate concern thresholds (~20-30%); well under the 10% bar Mohammed cited. No action needed.
+- **Pre-submission integrity checks now complete:** (1) Paperpal plagiarism pre-check PASS; (2) IEEE AI disclosure in manuscript DONE (acknowledgment section, wording approved by Mohammed).
+- **One open item before submission:** whether the acknowledgment must explicitly name Muse/Meta per IEEE guidance (wording currently says only "AI assistants") — Mohammed has not yet decided; do not alter his approved wording without his say-so.
+- **Remaining after his final go-ahead:** commit + push Phase 9 (verify remote), upload Phase 9 artifacts to HF dataset, make GitHub + HF public (verify both), cover letter + ScholarOne metadata, submit.
+- **Spend:** $0.00.

@@ -1,0 +1,26 @@
+# Cover letter — IEEE TPDS submission (DRAFT, for Mohammed's review)
+
+> Do NOT send without Mohammed's explicit approval.
+
+---
+
+Dear Editor-in-Chief,
+
+We are pleased to submit our manuscript entitled **"Crash-Consistent Checkpointing for Exactly-Once Agent Effects: A Write-Ahead Claim Log for LLM Agent Harnesses"** for consideration as a regular paper in the *IEEE Transactions on Parallel and Distributed Systems*.
+
+**Contribution.** LLM agent harnesses checkpoint trajectories, not effect commitments. When the harness crashes between a tool-effect commit and the checkpoint write, the resumed agent re-fires the tool, producing a duplicate side effect — the "double refund" window. We prove formally that idempotency keys alone cannot close this window in general (content-hash keys break under argument rewording; deterministic keys break when recovery replanning shifts step indices), and we propose a write-ahead effect-claim log: claims are logged durably before tool invocation, checkpoints are fenced by the log, and recovery reconciles from the log first under a fencing epoch. Across a scripted sandbox (1,500 episodes/condition), a production LangGraph port with real SIGKILL crashes, and LLM-driven validation, the claim log achieves zero duplicate effects with ~1% latency overhead. To our knowledge, this is the first crash-consistency mechanism for exactly-once external effects in LLM agent harnesses, and it fits squarely within TPDS's scope of dependable distributed systems.
+
+**Originality.** This manuscript is original work, has not been published elsewhere, and is not currently under consideration by any other journal or conference. A preprint of this manuscript has been posted to arXiv (URL to be inserted after posting) in accordance with IEEE's preprint policy.
+
+**AI assistance disclosure.** During the preparation of this work, the authors used AI assistants to support drafting and revision of the manuscript under their direction. All research content, including the hypotheses, experiments, results, analysis, and conclusions, was conceived, reviewed, and verified by the authors, who take full responsibility for the publication. [NOTE: confirm whether TPDS requires naming the AI system explicitly before finalizing.]
+
+**Suggested reviewers / conflicts.** [Mohammed to fill in, optional.]
+
+Corresponding author:
+Mohammed Kamran Syed, IEEE Independent Researcher, Mountain House, CA, USA
+mohammedkamran.syed@ieee.org · ORCID: 0009-0009-9058-5375
+
+We thank you for your consideration.
+
+Sincerely,
+Mohammed Kamran Syed (on behalf of all authors)
