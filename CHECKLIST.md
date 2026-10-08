@@ -22,29 +22,32 @@ Reporting: safety/completion split everywhere; reconcile 140 vs 210 eps, 214 vs 
 Suggested central contribution: "a crash-recovery protocol that preserves tool-operation identities across agent replanning, with explicit receiver assumptions and fault-injection evaluation."
 
 ## Phase 1 — Writing / related-work / reporting fixes
-- [ ] 1.1 LogAct characterization corrected (it discusses crash recovery §3.2)
-- [ ] 1.2 ACRFence overlap acknowledged; LIMBO 4% attribution narrowed
-- [ ] 1.3 Add RIFL (SOSP 2015) + classical WAL / durable-execution / sagas citations
-- [ ] 1.4 Bib metadata: fix titles [1],[2],[3]; replace "Anonymous" with public authors [1],[2],[3],[6]
-- [ ] 1.5 Comparison table: fault model × durable records × identity handling × receiver assumptions × fencing × guarantee × evaluation
-- [ ] 1.6 Safety/completion split in abstract, contributions, conclusion, §6
-- [ ] 1.7 Reconcile counts: 140 vs 210 eps; 214 decisions vs 180 eps; duplicate-rate definitions + denominators; 20.3 ms overhead definition
-- [ ] 1.8 Uncertainty bounds: 0/60 → 4.87%, 0/1,500 → 0.20% (one-sided 95%)
-- [ ] 1.9 Fix Algorithm 1 step/line refs; LaTeX artifacts (literal \S, table labels, stranded headings)
-- [ ] 1.10 Overhead: paired end-to-end latency, throughput, recovery time (replace "~1%" estimate)
+**Status: DRAFTED 2026-10-07** — all items drafted in PHASE1_REVISIONS.md (pushed 8b6d9e9); manuscript application in Phase 5 (running).
+- [x] 1.1 LogAct characterization corrected (it discusses crash recovery §3.2)
+- [x] 1.2 ACRFence overlap acknowledged; LIMBO 4% attribution narrowed
+- [x] 1.3 Add RIFL (SOSP 2015) + classical WAL / durable-execution / sagas citations
+- [x] 1.4 Bib metadata: fix titles [1],[2],[3]; replace "Anonymous" with public authors [1],[2],[3],[6]
+- [x] 1.5 Comparison table: fault model × durable records × identity handling × receiver assumptions × fencing × guarantee × evaluation
+- [x] 1.6 Safety/completion split in abstract, contributions, conclusion, §6
+- [x] 1.7 Reconcile counts: 140 vs 210 eps; 214 decisions vs 180 eps; duplicate-rate definitions + denominators; 20.3 ms overhead definition
+- [x] 1.8 Uncertainty bounds: 0/60 → 4.87%, 0/1,500 → 0.20% (one-sided 95%)
+- [x] 1.9 Fix Algorithm 1 step/line refs; LaTeX artifacts (literal \S, table labels, stranded headings)
+- [x] 1.10 Overhead: paired end-to-end latency, throughput, recovery time (replace "~1%" estimate)
 
 ## Phase 2 — Theory repair
-- [ ] 2.1 Theorem 1: narrow to identity-unstable derivations, or prove the information requirement. Defensible: "Idempotency keys derived from mutable argument text or unstable plan positions cannot guarantee duplicate suppression across all admissible recovery replans."
-- [ ] 2.2 Claim-log necessity: prove necessary or describe as sufficient (durable op table could suffice)
-- [ ] 2.3 Theorem 2: define logical effect identity (distinguish legitimate repeats; recognize equivalent retries)
-- [ ] 2.4 Theorem 2: split (a) at-most-once per durable claim identity, (b) eventual commitment under progress assumptions, (c) workflow completion
-- [ ] 2.5 Fix proof inconsistency: split cases at Claim durability / tool commitment / Commit durability / checkpoint durability
+**Status: DRAFTED 2026-10-07** — all items drafted in PHASE2_REVISIONS.md (pushed 8b6d9e9); 2.2 decision = option (b); manuscript application in Phase 5 (running).
+- [x] 2.1 Theorem 1: narrow to identity-unstable derivations, or prove the information requirement. Defensible: "Idempotency keys derived from mutable argument text or unstable plan positions cannot guarantee duplicate suppression across all admissible recovery replans."
+- [x] 2.2 Claim-log necessity: prove necessary or describe as sufficient (durable op table could suffice)
+- [x] 2.3 Theorem 2: define logical effect identity (distinguish legitimate repeats; recognize equivalent retries)
+- [x] 2.4 Theorem 2: split (a) at-most-once per durable claim identity, (b) eventual commitment under progress assumptions, (c) workflow completion
+- [x] 2.5 Fix proof inconsistency: split cases at Claim durability / tool commitment / Commit durability / checkpoint durability
 
 ## Phase 3 — Protocol specification
-- [ ] 3.1 Epoch acquisition, ownership, atomic registration; epoch recovery/increase atomicity
-- [ ] 3.2 Duplicate-call result return (original results for downstream use)
-- [ ] 3.3 Partially written JSONL records: detection + handling
-- [ ] 3.4 Parallel execution: checkpoint frontier with gaps/dependencies; concurrent equivalent claims; parallel completion frontier
+**Status: DRAFTED 2026-10-07** — all items drafted in PHASE3_REVISIONS.md (pushed 8b6d9e9, incl. 5-item honest gap register); manuscript application in Phase 5 (running).
+- [x] 3.1 Epoch acquisition, ownership, atomic registration; epoch recovery/increase atomicity
+- [x] 3.2 Duplicate-call result return (original results for downstream use)
+- [x] 3.3 Partially written JSONL records: detection + handling
+- [x] 3.4 Parallel execution: checkpoint frontier with gaps/dependencies; concurrent equivalent claims; parallel completion frontier
 
 ## Phase 4 — Experiments (designs condensed; full detail in git history)
 - [x] E1 — Native-persistence baseline: LangGraph SqliteSaver + deterministic positional keys, no claim log, matched crash schedules, 60 eps. DONE 2026-10-07: dup 0.0000 / exactly-once 1.000. → paper claim becomes the boundary characterization. (`results_e1_native.json`)
