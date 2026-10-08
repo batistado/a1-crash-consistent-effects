@@ -4,7 +4,12 @@ One file, updated in place. Newest status goes at the top of each section.
 The append-only narrative lives in `RUNLOG.md`. Evidence files (results JSONs,
 reports) are referenced, not duplicated here.
 
-## Current status — 2026-10-07 ~19:53 PDT
+## Current status — 2026-10-07 ~21:05 PDT — Phase 6 RUNNING (second review: hold TPDS)
+- Second private review (2026-10-07): meaningful improvement, HOLD submission. 3 major blockers: (1) Theorem 1 universal step invalid → non-invariance condition, drop necessity heading; (2) identity (action,target,occurrence) not implemented by Algorithm 1/Table 2/L4 → unify + key↔identity invariant + 2 new tests; (3) experiments underdescribed → methods subsection, E4 trace, honest E5 interval, related-work + PDF fixes.
+- Mohammed (voice): necessity heading removed/softened; Phase 6 authorized on all three points.
+- Next: Phase 6 agent work → re-review → resubmit decision.
+
+## Previous status — 2026-10-07 ~19:53 PDT
 - Phases 1–3 revision DRAFTS complete and PUSHED (8b6d9e9): PHASE1_REVISIONS.md (750 lines, incl. 4 corrected bib entries + 2 new discrepancies found: API spend $0.1137 not "under $0.10"; paired e2e latency never measured), PHASE2_REVISIONS.md (Theorem 1 narrowed, Theorem 2 split 2a/2b/2c, 2.2 → option (b) recommended), PHASE3_REVISIONS.md (protocol spec + 5-item honest gap register).
 - Phase 5 COMPLETE 2026-10-08: all revisions applied to main.tex + FORMAL_MODEL.md; 2.2 = option (b); paired-timing gap closed (wal vs det +0.38s n.s., wal vs native -1.92s); PDF rebuilt (11 pp, 0 errors); self re-review: all 6 concerns ADDRESSED. Pushed f401921.
 - Next: Mohammed's review (2.2 confirmation + PDF read) → resubmit decision.
