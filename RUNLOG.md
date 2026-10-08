@@ -355,3 +355,38 @@ spend, verdict. Newest at the bottom. Times in PDT unless noted.
 - Reference: existing v2 wal 0.0000/1.0000, deterministic 0.0000/1.0000, baseline 0.7833/0.2167 (60 eps each).
 - Verdict: PASS (boundary result, as predicted in the design doc). Native persistence + stable deterministic keys ties the WAL — the WAL shows no incremental benefit when identities are stable. The WAL's value is isolated to identity-unstable recovery (E2) + explicit auditability. Paper claim updates to the boundary characterization; honest §6.3 revision: acknowledge native works here; WAL wins on robustness. Per-episode wall latency p50 24.6s / p99 60.4s (checkpointer resume + crash/recovery cycles; slower than manual replay — report as measured).
 - Output: langgraph_port/results_e1_native.json(.jsonl). Drivers: langgraph_port/agent_graph_v2_native.py, agent_run_v2_native.py.
+
+## 2026-10-08 ~02:30 PDT — A1 Phase 4 E3a fan-out scaling COMPLETE
+- WAL condition, N_BRANCHES 2/4/8, 30 eps each, matched crash schedule.
+- Result: n=2: 30/30 EO, 0 dups; n=4: 30/30 EO, 0 dups; n=8: 30/30 EO, 0 dups.
+- Verdict: PASS. WAL holds exactly-once as fan-out grows 2→8. (Early n=2 miss issue was an A1_N_BRANCHES env-var propagation bug in my launch script, not a WAL problem — fixed by explicit export + verification.)
+- Output: results_e3a_n2/n4/n8.json. $0.
+
+## 2026-10-08 ~02:30 PDT — A1 Phase 4 E2 identity-shift COMPLETE
+- E2a positional (branch rotation): det_shift 46 dups / 46 miss / 14-60 EO (BREAKS); wal 0 dups / 60-60 EO (HOLDS).
+- E2b content (target rewording): det_content 92 dups / 0 miss / 14-60 EO (BREAKS); wal 0 dups / 60-60 EO (HOLDS, via canonicalized lookup).
+- Mechanism verified: same logical effect commits twice with different keys (positional b1->b0; content-hash ch:3de5->ch:ab7f on reworded target).
+- Verdict: PASS. The boundary characterization holds: deterministic keys break when recovery replanning shifts positions or rewords args; WAL claim records preserve identities. This is the paper's new central insight per reviewer §4.
+- Output: results_e2a_shift.json, results_e2b_content.json. $0 (deterministic paraphrase, no LLM).
+
+## 2026-10-07 ~19:30 PDT — A1 Phase 4 E2b content identity-shift COMPLETE
+- Config: 120 episodes (det_content + wal, 60 each), recovery rewords targets via fixed invertible paraphrase (`finding-r0-b0` → `finding_r0_b0_rpl`); keys are content hashes; scoring canonicalizes committed targets through the inverse map (committed in crash_harness_v2.py). Seed 20261011, scripted, $0 API.
+- Result det_content: dup-episode rate 0.7667 (46/60), exactly-once 0.2333, mean 1.53 dups/ep, 0 missing. By window: mid_fanout 35/35 dup, retry_backoff 11/12, post_branch 0/13. Mechanism (verified in ledger): fresh commits (action,target) with content-hash key; recovery replays the unsettled branch under the reworded target → fresh hash → unseen key → receiver commits → semantic duplicate.
+- Result wal (same campaign): 0.0000 dup / 1.0000 exactly-once (60/60), 0 missing — claim lookup canonicalizes the reworded target, reuses the ORIGINAL key → duplicate_suppressed.
+- Verdict: PASS. Content-hash identities break when recovery rephrases arguments; the WAL's identity-preserving claim log holds. Directly answers reviewer §3 ("identities change across recovery").
+- Output: langgraph_port/results_e2b_content.json(.jsonl).
+
+## 2026-10-07 ~19:35 PDT — A1 Phase 4 E2a positional identity-shift COMPLETE
+- Config: 180 episodes (det_shift + wal + baseline, 60 each). Recovery replanning rotates dispatch positions (todo[1:]+todo[:1]); replayed workers re-derive positional keys from shifted indices. Seed 20261011, scripted, $0 API.
+- Result det_shift: dup-episode rate 0.7667 (46/60), exactly-once 0.2333, mean 0.77 dups/ep AND mean 0.77 missing/ep. By window: mid_fanout 26/26 (dup+miss), retry_backoff 20/20, post_branch 0/14.
+- Mechanism (traced in ledgers/progress.log): the committed-but-unmarked branch's replay re-derives an UNSEEN key (its new position's key was never used — that position's original branch hadn't committed) → receiver commits → semantic duplicate. Second failure mode: replays whose new positions collide with ALREADY-COMMITTED keys of other branches are wrongly suppressed → those effects are LOST (missing=1). Both are genuine consequences of unstable positional identities: duplicates via unseen re-derivation, lost effects via cross-operation key collision.
+- Result wal (same campaign): 0.0000 dup / 1.0000 exactly-once (60/60) — find_by_identity reuses the original key regardless of position.
+- Result baseline: 0.80/0.20 (consistent with v2 baseline 0.7833).
+- Verdict: PASS. Positional identities break under replanning; WAL holds. This is the experiment the reviewer asked for ("identities change across recovery").
+- Output: langgraph_port/results_e2a_shift.json(.jsonl).
+
+## 2026-10-08 ~02:45 PDT — A1 Phase 4 E3c concurrent load COMPLETE
+- Direct tool-server load test, K concurrent clients x 50 fence+commit ops.
+- K=1: 689 ops/s, p50 1.3ms, p99 2.4ms. K=4: 636 ops/s, p50 5.4ms, p99 15.9ms. K=16: 310 ops/s, p50 11.2ms, p99 1055ms.
+- Verdict: PASS with caveat. Server handles low concurrency (K<=4) with modest degradation; at K=16 throughput halves and p99 explodes (single-threaded HTTP server + file I/O serialization). Production needs a concurrent server; experimental scale unaffected.
+- Output: results_e3c_k1/k4/k16.json. Driver: langgraph_port/e3c_loadtest.py. $0.

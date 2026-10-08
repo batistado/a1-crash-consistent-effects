@@ -51,6 +51,20 @@ def log(msg):
 # tool server lifecycle (separate port from the v1 port)
 # --------------------------------------------------------------------------
 def start_server(state_dir, host, port):
+    # E3c: A1_REUSE_SERVER=1 -> attach to an externally started shared tool
+    # server instead of spawning a private one (measures server contention
+    # under concurrent workflows). Returns (None, url).
+    if os.environ.get("A1_REUSE_SERVER") == "1":
+        url = f"http://{host}:{port}"
+        for _ in range(200):
+            try:
+                with urllib.request.urlopen(url + "/health", timeout=1) as r:
+                    if r.status == 200:
+                        log(f"reusing shared tool server at {url}")
+                        return None, url
+            except Exception:
+                time.sleep(0.05)
+        raise RuntimeError("A1_REUSE_SERVER=1 but no shared server is up")
     proc = subprocess.Popen(
         [VENV_PY, os.path.join(PORT_DIR, "tool_server.py"),
          "--state-dir", state_dir, "--host", host, "--port", str(port)],
@@ -345,7 +359,10 @@ def run_episode(cfg, server_url, server_state_dir, cond, ep_idx, run_tag,
         route1, llm_fb = None, False
     intended = intended_effects(scenario)
     committed = []
-    ledger_path = os.path.join(server_state_dir, "ledger.jsonl")
+    # E3c: concurrent campaigns share one tool server; its ledger lives in
+    # the shared state dir, not this campaign's private one.
+    ledger_dir = os.environ.get("A1_SHARED_LEDGER_DIR") or server_state_dir
+    ledger_path = os.path.join(ledger_dir, "ledger.jsonl")
     if os.path.exists(ledger_path):
         with open(ledger_path, "rb") as f:
             for line in f:
@@ -440,8 +457,10 @@ def main():
                         f"miss={rec['missing']} eo={rec['exactly_once']} "
                         f"crash={rec['crash_type']}")
     finally:
-        server_proc.terminate()
-        server_proc.wait(timeout=10)
+        # E3c: shared server is owned by the driver, not this campaign.
+        if server_proc is not None:
+            server_proc.terminate()
+            server_proc.wait(timeout=10)
 
     # ---- overhead: aggregate claim-log per-record latencies (wal only) ----
     latencies = []
