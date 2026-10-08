@@ -326,7 +326,7 @@ spend, verdict. Newest at the bottom. Times in PDT unless noted.
 - Revision plan: REVISION_PLAN_20261007.md (checklist). Order: (1) related-work + bibliography fixes, (2) safety/completion split in claims + uncertainty bounds, (3) theorem repairs, (4) protocol spec completion, (5) new experiments (native baseline, identity-shift case, scale), (6) re-review before TPDS.
 - Spend: $0. Next: work the checklist; B1 manuscript PDF building in parallel.
 
-## 2026-10-08 ~01:50 PDT — A1 Phase 4 E4 fencing trace COMPLETE
+## 2026-10-07 ~18:50 PDT — A1 Phase 4 E4 fencing trace COMPLETE
 - Instrumented re-run of sandbox no_fencing (200 eps, seed 20261010, $0).
 - Result: 102/200 episodes with duplicates (0.51, cf. 0.4927 at n=1500).
 - Classification of offending calls: 102/102 = type (b) fresh-key zombie commits; 0 type (a) same-key retries.
@@ -334,17 +334,24 @@ spend, verdict. Newest at the bottom. Times in PDT unless noted.
 - Verdict: PASS. Causal mechanism confirmed — the ~49% is surviving writers creating fresh keys the idempotent receiver cannot suppress (unseen keyspace); delayed same-key retries are correctly suppressed. Answers reviewer §4.
 - Output: results_e4_fencing_trace.json. Driver: src/e4_fencing_trace.py.
 
-## 2026-10-08 ~01:55 PDT — A1 Phase 4 E3b claim-log length scaling COMPLETE
+## 2026-10-07 ~18:55 PDT — A1 Phase 4 E3b claim-log length scaling COMPLETE
 - Microbenchmark: append N claims + N commits, N in {100, 1000, 10000}; $0.
 - Append latency p50 flat at 0.028–0.029ms (append-only O(1) holds).
 - find_by_identity: 6.6ms (n=100) → 16.8ms (n=1k) → 850ms (n=10k). Linear scan degrades sharply.
 - Verdict: PASS with honest caveat. At experimental scale (<100 claims) lookup is <7ms; the O(n) scan is the scaling bottleneck (850ms at 10k). Report + note indexing as follow-up.
 - Output: results_e3b_logscale.json. Driver: src/e3b_logscale.py.
 
-## 2026-10-08 ~01:45 PDT — A1 Phase 4 campaigns LAUNCHED (E1/E2a/E2b/E3a)
+## 2026-10-07 ~18:45 PDT — A1 Phase 4 campaigns LAUNCHED (E1/E2a/E2b/E3a)
 - E1 native-persistence baseline (SqliteSaver checkpointer, 60 eps, port 8766).
 - E2a identity-shift positional (det_shift/wal/baseline, 60 ea, port 8767).
 - E2b identity-shift content (det_content/wal + reword_recovery, 60 ea, port 8768).
 - E3a fan-out scaling (wal, n_branches 2/4/8, 30 ea, ports 8771-8773).
 - All scripted, $0 API. Early signal: det_shift already duplicating (mid_fanout).
 - Design doc: PHASE4_EXPERIMENT_DESIGNS.md.
+
+## 2026-10-07 ~19:10 PDT — A1 Phase 4 E1 native-persistence baseline COMPLETE
+- Config: 60 episodes, `native` condition — v2 graph compiled with LangGraph's own SqliteSaver checkpointer (file-backed checkpoints.db, survives SIGKILL); deterministic positional keys (durable operation identities); NO claim log; recovery = fresh process + same thread_id + `graph.invoke(None, config)` (framework-native resume). Matched crash schedule (mid_fanout 0.5 / post_branch 0.25 / retry_backoff 0.25), seed 20261011, scripted planner, $0 API.
+- Result: duplicate-episode rate 0.0000, exactly-once 1.0000 (60/60), 0 missing effects. By crash window: mid_fanout 26/26, post_branch 18/18, retry_backoff 16/16 — all clean. 0 crash_missed, 0 recover failures; zombie probes fenced 60/60 both sides. Checkpointer verified real (51 checkpoints / 193 writes in checkpoints.db for a sample episode).
+- Reference: existing v2 wal 0.0000/1.0000, deterministic 0.0000/1.0000, baseline 0.7833/0.2167 (60 eps each).
+- Verdict: PASS (boundary result, as predicted in the design doc). Native persistence + stable deterministic keys ties the WAL — the WAL shows no incremental benefit when identities are stable. The WAL's value is isolated to identity-unstable recovery (E2) + explicit auditability. Paper claim updates to the boundary characterization; honest §6.3 revision: acknowledge native works here; WAL wins on robustness. Per-episode wall latency p50 24.6s / p99 60.4s (checkpointer resume + crash/recovery cycles; slower than manual replay — report as measured).
+- Output: langgraph_port/results_e1_native.json(.jsonl). Drivers: langgraph_port/agent_graph_v2_native.py, agent_run_v2_native.py.
