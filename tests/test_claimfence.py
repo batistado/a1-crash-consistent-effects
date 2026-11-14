@@ -216,3 +216,192 @@ def test_torn_trailing_record_and_multi_occurrence_http():
             assert c1.key != c0.key
         finally:
             srv.shutdown()
+
+
+def test_multinode_disjoint_filesystem_http_claim_store():
+    """Verifies cross-node failover over HTTPClaimStore with zero shared POSIX filesystem."""
+    from claimfence import (
+        HTTPClaimStore,
+        RemoteClaimStoreState,
+        start_remote_claim_store_in_thread,
+    )
+
+    with tempfile.TemporaryDirectory() as state_node_dir:
+        state_svc = RemoteClaimStoreState(state_node_dir)
+        srv, state_url = start_remote_claim_store_in_thread(state_svc)
+        recv = AtomicIdempotentReceiver(None)
+        wid = "wf-multinode"
+        try:
+            # Node A (no local checkpoint file; uses remote state store)
+            node_a_store = HTTPClaimStore(state_url, wid)
+            rt_a = ClaimFenceRuntime(wid, node_a_store, None, recv, holder_id="node-A")
+
+            def crash_in_window(stage: str) -> None:
+                if stage == "after_call_before_commit_log":
+                    raise RuntimeError("NODE_A_VM_TERMINATED")
+
+            try:
+                rt_a.execute_step(0, "issue_refund", "cust-500", {"amt": 99}, occurrence=0, crash_hook=crash_in_window)
+            except RuntimeError:
+                pass
+
+            assert rt_a.read_checkpoint()["checkpoint"] == -1
+            assert len(recv.workflow_commits(wid)) == 1
+
+            # Node B starts on a completely separate host with a fresh HTTPClaimStore client
+            node_b_store = HTTPClaimStore(state_url, wid)
+            rt_b = ClaimFenceRuntime(wid, node_b_store, None, recv, holder_id="node-B")
+            info = rt_b.recover()
+            assert info["epoch"] == 1
+            assert info["replayed_claims"] == 1
+            assert info["checkpoint"] == 0
+
+            # Node A wakes from partition as zombie -> fenced 409
+            try:
+                rt_a.execute_step(1, "record_ledger", "cust-500", {"tok": "stale"})
+                assert False, "Expected FencedError"
+            except FencedError:
+                pass
+
+            # Node B retrieves Step 0's cached receipt_token over network and executes Step 1
+            saved = rt_b.get_committed_result("issue_refund", "cust-500", 0)
+            assert saved is not None and "receipt_token" in saved
+            res1 = rt_b.execute_step(1, "record_ledger", "cust-500", {"upstream_token": saved["receipt_token"]})
+            assert res1["status"] == "committed"
+            assert len(recv.workflow_commits(wid)) == 2
+        finally:
+            srv.shutdown()
+
+
+def test_transactional_outbox_proxy_stripe_and_legacy_upstreams():
+    """Verifies TransactionalOutboxProxy fronting unmodified Stripe-like and legacy REST APIs."""
+    import json
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    from claimfence import HTTPClaimStore, RemoteClaimStoreState, TransactionalOutboxProxy, start_remote_claim_store_in_thread
+
+    def start_dummy_upstream(support_idempotency_key: bool):
+        commits = []
+        seen_idem = {}
+        lock = threading.Lock()
+
+        class UpHandler(BaseHTTPRequestHandler):
+            def log_message(self, fmt, *args):
+                return
+
+            def do_POST(self):
+                n = int(self.headers.get("Content-Length", "0"))
+                body = json.loads(self.rfile.read(n).decode("utf-8"))
+                idem = self.headers.get("Idempotency-Key")
+                with lock:
+                    if support_idempotency_key and idem and idem in seen_idem:
+                        payload = seen_idem[idem]
+                    else:
+                        tok = f"up_rcpt_{len(commits) + 1}"
+                        payload = {"result": {"receipt_token": tok}}
+                        commits.append({"idem": idem, "body": body, "tok": tok})
+                        if support_idempotency_key and idem:
+                            seen_idem[idem] = payload
+                raw = json.dumps(payload).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(raw)))
+                self.end_headers()
+                self.wfile.write(raw)
+
+        httpd = ThreadingHTTPServer(("127.0.0.1", 0), UpHandler)
+        t = threading.Thread(target=httpd.serve_forever, daemon=True)
+        t.start()
+        return httpd, f"http://127.0.0.1:{httpd.server_address[1]}", commits
+
+    # Case A: Unmodified Stripe-like upstream (Idempotency-Key supported, NO /fence endpoint)
+    # Survives BOTH worker crash AND proxy crash inside W_proxy!
+    up_srv, up_url, up_commits = start_dummy_upstream(support_idempotency_key=True)
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            proxy = TransactionalOutboxProxy(os.path.join(tmp, "outbox.sqlite"), up_url)
+            store = IndexedJSONLClaimStore(os.path.join(tmp, "claims.jsonl"))
+            ckpt = os.path.join(tmp, "ckpt.json")
+            wid = "wf-stripe"
+
+            c0, _ = store.create_or_reuse(wid, "0", "issue_refund", "cust-88", {"amt": 50}, 0, 0)
+
+            # Simulate proxy crash right after upstream commits, before outbox marks COMPLETED!
+            def proxy_crash(stage: str) -> None:
+                if stage == "after_upstream_before_outbox_complete":
+                    raise RuntimeError("PROXY_HOST_CRASH")
+
+            try:
+                proxy.call(wid, "0", "issue_refund", "cust-88", {"amt": 50}, c0.key, 0, "w0", proxy_crash_hook=proxy_crash)
+            except RuntimeError:
+                pass
+            assert len(up_commits) == 1
+
+            # Recovery worker runs ClaimFenceRuntime against restarted proxy -> 0 upstream duplicates + authentic receipt_token!
+            proxy_restarted = TransactionalOutboxProxy(os.path.join(tmp, "outbox.sqlite"), up_url)
+            rt_rec = ClaimFenceRuntime(wid, store, ckpt, proxy_restarted, holder_id="rec-1")
+            info = rt_rec.recover()
+            assert info["replayed_claims"] == 1
+            assert len(up_commits) == 1
+            saved = rt_rec.get_committed_result("issue_refund", "cust-88", 0)
+            assert saved == {"receipt_token": "up_rcpt_1"}
+        finally:
+            up_srv.shutdown()
+
+    # Case B: Unmodified legacy non-idempotent upstream (NO Idempotency-Key, NO /fence)
+    # Eliminates 100% of worker W(s) crashes and stale zombies!
+    leg_srv, leg_url, leg_commits = start_dummy_upstream(support_idempotency_key=False)
+    with tempfile.TemporaryDirectory() as tmp2:
+        try:
+            proxy2 = TransactionalOutboxProxy(os.path.join(tmp2, "outbox_leg.sqlite"), leg_url)
+            store2 = IndexedJSONLClaimStore(os.path.join(tmp2, "claims_leg.jsonl"))
+            ckpt2 = os.path.join(tmp2, "ckpt_leg.json")
+            wid2 = "wf-legacy"
+            rt0 = ClaimFenceRuntime(wid2, store2, ckpt2, proxy2, holder_id="w0")
+
+            try:
+                rt0.execute_step(
+                    0, "issue_refund", "cust-99", {"amt": 75}, 0,
+                    crash_hook=lambda st: (_ for _ in ()).throw(RuntimeError("WORKER_CRASH")) if st == "after_call_before_commit_log" else None,
+                )
+            except RuntimeError:
+                pass
+            assert len(leg_commits) == 1
+
+            rt_rec2 = ClaimFenceRuntime(wid2, store2, ckpt2, proxy2, holder_id="rec-1")
+            rt_rec2.recover()
+            # Late zombie with fresh key is fenced by the proxy before ever reaching legacy upstream!
+            code, _ = proxy2.call(wid2, "0", "issue_refund", "cust-99", {"amt": 75}, "rogue-key", epoch=0, holder_id="w0")
+            assert code == 409
+            assert len(leg_commits) == 1
+            assert rt_rec2.get_committed_result("issue_refund", "cust-99", 0) == {"receipt_token": "up_rcpt_1"}
+        finally:
+            leg_srv.shutdown()
+
+
+def test_canonical_identity_extractor_and_a4_guardrail():
+    """Verifies target canonicalization, diagnostic bypass, and A4 occurrence guardrails."""
+    from claimfence import AuthorizationViolationError, CanonicalIdentityExtractor
+
+    ext = CanonicalIdentityExtractor(
+        effectful_actions={"issue_refund", "record_ledger"},
+        diagnostic_actions={"check_account_status"},
+        authorized_max_occurrence={("issue_refund", "cust-1042"): 0},
+        default_max_occurrence=0,
+    )
+
+    # 1. Surface target drift and E2b-style paraphrase normalize to identical canonical target
+    id1 = ext.extract({"action": "issue_refund", "target": "  CUST_1042  "})
+    id2 = ext.extract({"action": "issue_refund", "target": "customer cust-1042 (retry)_rpl", "occurrence": 0})
+    assert id1.triple == ("issue_refund", "cust-1042", 0)
+    assert id2.triple == ("issue_refund", "cust-1042", 0)
+
+    # 2. Diagnostic calls are flagged read-only without mutating claim state
+    diag = ext.extract({"action": "check_account_status", "target": "CUST_1042"})
+    assert diag.is_diagnostic and diag.target == "cust-1042"
+
+    # 3. Hallucinated occurrence=1 when only occurrence=0 is authorized raises fail-closed error
+    try:
+        ext.extract({"action": "issue_refund", "target": "cust-1042", "occurrence": 1})
+        assert False, "Expected AuthorizationViolationError on unauthorized occurrence=1"
+    except AuthorizationViolationError:
+        pass

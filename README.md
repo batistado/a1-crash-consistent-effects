@@ -9,24 +9,28 @@ Existing agent orchestration frameworks (`LangGraph`, `CrewAI`, `AutoGen`, cloud
 
 ## Key Capabilities
 
-1. **Concurrency-Safe $O(1)$ Write-Ahead Claim Stores (`claimfence/claim_store.py`):**
-   - `IndexedJSONLClaimStore`: Append-only log with `O(1)` hash lookup (`2.17 µs` at `10,000` claims — `12,987x` faster than unindexed JSONL scanning), incremental cross-process tail refresh, ARIES-style torn-tail truncation, POSIX `fcntl.flock` serialization across concurrent workers, and optional physical NAND flush (`F_FULLFSYNC`).
-   - `SQLiteWALClaimStore`: Transactional SQLite WAL backend (`PRAGMA journal_mode=WAL; synchronous=FULL`) with `0.37 ms` per-step write latency.
-2. **Server-Enforced Atomic `CAS_inc` Epoch-Lease Fencing (`claimfence/receiver.py`):**
-   - Atomically increments `(max_epoch[wid], holder)` at the service boundary, rejecting delayed zombie workers (`HTTP 409`) and serializing concurrent dual-recovery instances without client-side race windows.
-3. **Payload-Preserving Reconciliation-First Recovery (`claimfence/reconciler.py`):**
+1. **Single-Host & Disaggregated Multi-Node Claim Stores (`claimfence/claim_store.py`, `claimfence/network_store.py`):**
+   - `IndexedJSONLClaimStore`: Single-host/shared-POSIX append-only log with `O(1)` hash lookup (`2.17 µs` at `10,000` claims, `12,987x` faster than unindexed JSONL scanning), incremental cross-process tail refresh, ARIES-style torn-tail truncation, POSIX `fcntl.flock` serialization, and optional physical NAND flush (`F_FULLFSYNC`).
+   - `SQLiteWALClaimStore`: Single-host transactional SQLite WAL backend (`PRAGMA journal_mode=WAL; synchronous=FULL`) with `0.37 ms` per-step write latency.
+   - `HTTPClaimStore` & `RemoteClaimStoreState`: Disaggregated multi-node state service over HTTP/1.1 keep-alive connections (`0.81 ms` per-step p50, zero shared local filesystem).
+2. **Schema-Canonicalized Identity Extraction & A4 Guardrails (`claimfence/extractor.py`):**
+   - `CanonicalIdentityExtractor`: Routes read-only diagnostic calls around `L`, normalizes surface entity-ID formatting drift, binds `occurrence` from declarative task ordinals (never attempt counters), and enforces fail-closed `authorized_max_occurrence` bounds.
+3. **Cooperative `CAS_inc` Fencing & Third-Party API Outbox Proxy (`claimfence/receiver.py`, `claimfence/outbox_proxy.py`):**
+   - Atomically increments `(max_epoch[wid], holder)` at cooperative receivers or via `TransactionalOutboxProxy` fronting unmodified commercial (`Idempotency-Key`) and legacy REST endpoints.
+4. **Payload-Preserving Reconciliation-First Recovery (`claimfence/reconciler.py`):**
    - Replays uncommitted pre-crash claims with their frozen keys *before* consulting the LLM planner and restores RIFL-complete return payloads (`receipt_token`) to downstream dependent workflow stages.
-4. **Exhaustive Finite-State Model Checker (`benchmarks/model_check_protocol.py`):**
-   - Explores 100% of reachable asynchronous crash, zombie, and dual-recovery interleavings (`149` states, `259` transitions), verifying zero safety, completion, or payload-loss violations.
+5. **Exhaustive Finite-State Model Checker (`benchmarks/model_check_protocol.py`):**
+   - Explores 100% of reachable asynchronous crash, zombie, and dual-recovery interleavings (`149` states, `259` transitions) over a two-step chained protocol, verifying zero safety, completion, or payload-loss violations.
 
 ## Repository Structure
 
-- `claimfence/` — Core `ClaimFence` v2.0 Python package (`IndexedJSONLClaimStore`, `SQLiteWALClaimStore`, `AtomicIdempotentReceiver`, `ClaimFenceRuntime`).
+- `claimfence/` — Core `ClaimFence` v2.1 Python package (`IndexedJSONLClaimStore`, `SQLiteWALClaimStore`, `HTTPClaimStore`, `CanonicalIdentityExtractor`, `TransactionalOutboxProxy`, `AtomicIdempotentReceiver`, `ClaimFenceRuntime`).
 - `benchmarks/` — Reproducible verification and benchmark suite:
   - `model_check_protocol.py` — Exhaustive BFS finite-state model checker across 5 protocol designs.
   - `run_chaos_6way.py` — `33,000`-episode paired 6-architecture chaos & multi-crash horizon ($k \in \{1..4\}$) suite.
-  - `run_multimodel_sigkill.py` — Live Apple Silicon (`MPS` FP16) real OS `SIGKILL` evaluation across `Qwen2.5-3B-Instruct`, `Qwen2.5-7B-Instruct`, and `Qwen2.5-Coder-14B-Instruct`.
+  - `run_multimodel_sigkill.py` — Live Apple Silicon (`MPS` FP16) real OS `SIGKILL` evaluation across `Qwen2.5-3B-Instruct` and `Qwen2.5-7B-Instruct`.
   - `run_storage_scaling.py` — Persistent NVMe write-path breakdown (`os.fsync`, `F_FULLFSYNC`, `SQLite-WAL`), lookup scaling ($N = 100..10{,}000$), and `K = 1..32` concurrent workflow load tests.
+  - `run_multinode_proxy_a4.py` — Disaggregated multi-node `HTTPClaimStore` failover, `TransactionalOutboxProxy` (`Idempotency-Key` vs. legacy upstreams), and Assumption (A4) extractor boundary benchmarks.
 - `langgraph_port/` — Production `LangGraph` `StateGraph` (`v1` linear and `v2` conditional supervisor + parallel `Send` subgraphs + `E1–E5` boundary experiments).
 - `src/` — Standalone sandbox and `OpenAI` (`gpt-4o-mini`, `gpt-4.1-mini`) recovery-prompt ablation drivers.
 - `tests/` — `pytest` unit, crash-window, torn-tail, multi-worker contention, and dual-recovery test suite.

@@ -19,9 +19,12 @@ from .claim_store import (
     SQLiteWALClaimStore,
     atomic_write_json,
 )
+from .network_store import HTTPClaimStore
+from .outbox_proxy import TransactionalOutboxProxy
 from .receiver import AtomicIdempotentReceiver, FencedError
 
-ClaimStoreType = Union[IndexedJSONLClaimStore, SQLiteWALClaimStore]
+ClaimStoreType = Union[IndexedJSONLClaimStore, SQLiteWALClaimStore, HTTPClaimStore]
+ReceiverType = Union[AtomicIdempotentReceiver, TransactionalOutboxProxy]
 
 
 class ClaimFenceRuntime:
@@ -31,19 +34,21 @@ class ClaimFenceRuntime:
         self,
         workflow_id: str,
         store: ClaimStoreType,
-        checkpoint_path: str,
-        receiver: AtomicIdempotentReceiver,
+        checkpoint_path: Optional[str],
+        receiver: ReceiverType,
         holder_id: Optional[str] = None,
     ) -> None:
         self.workflow_id = workflow_id
         self.store = store
-        self.checkpoint_path = os.path.abspath(checkpoint_path)
+        self.checkpoint_path = os.path.abspath(checkpoint_path) if checkpoint_path else None
         self.receiver = receiver
-        self.holder_id = holder_id or f"worker-{uuid.uuid4().hex[:8]}"
+        self.holder_id = holder_id or f"worker-{uuid.uuid4()[:8] if hasattr(uuid, 'uuid4_str') else uuid.uuid4().hex[:8]}"
         self.epoch: int = 0
 
     def read_checkpoint(self) -> Dict[str, Any]:
-        if not os.path.exists(self.checkpoint_path):
+        if self.checkpoint_path is None and hasattr(self.store, "read_remote_checkpoint"):
+            return self.store.read_remote_checkpoint()  # type: ignore[union-attr]
+        if not self.checkpoint_path or not os.path.exists(self.checkpoint_path):
             return {"checkpoint": -1, "epoch": 0}
         import json
 
@@ -55,10 +60,16 @@ class ClaimFenceRuntime:
 
     def advance_checkpoint(self, step_index: int, claim_key: str) -> None:
         """Log-fenced checkpoint write: refuses to advance unless COMMIT(key) is durable."""
+        if self.checkpoint_path is None and hasattr(self.store, "advance_remote_checkpoint"):
+            self.store.advance_remote_checkpoint(  # type: ignore[union-attr]
+                step_index=step_index, epoch=self.epoch, claim_key=claim_key
+            )
+            return
         if not self.store.is_committed(claim_key):
             raise RuntimeError(
                 f"Log-fenced checkpoint violation: key {claim_key} is not committed in ClaimStore"
             )
+        assert self.checkpoint_path is not None
         cur = self.read_checkpoint().get("checkpoint", -1)
         if step_index >= cur:
             atomic_write_json(

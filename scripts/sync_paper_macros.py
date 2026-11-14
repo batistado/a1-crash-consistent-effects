@@ -20,6 +20,7 @@ def main() -> None:
     chaos = json.loads((ROOT / "results" / "chaos_6way_results.json").read_text())
     storage = json.loads((ROOT / "results" / "storage_and_concurrency_results.json").read_text())
     mm = json.loads((ROOT / "results" / "multimodel_sigkill_results.json").read_text())
+    mpa = json.loads((ROOT / "results" / "multinode_proxy_a4_results.json").read_text())
 
     mc_map = {m["protocol"]: m for m in mc["models"]}
     m6 = chaos["main_6way"]
@@ -27,6 +28,9 @@ def main() -> None:
     step_lat = storage["step_latency_breakdown"]
     scale_10k = [r for r in storage["lookup_scaling"] if r["n_claims"] == 10000][0]
     http_map = {r["concurrency_k"]: r for r in storage["http_concurrency"]}
+    net_lat = mpa["multinode_http_claim_store"]["latency_ms"]
+    px_map = mpa["outbox_proxy_evaluation"]
+    a4_map = mpa["a4_extractor_evaluation"]
 
     lines = [
         "% Auto-generated from JSON telemetry by scripts/sync_paper_macros.py -- DO NOT EDIT MANUALLY",
@@ -42,8 +46,10 @@ def main() -> None:
         f"\\newcommand{{\\ChaosHashDup}}{{\\ensuremath{{{m6['content_hash']['duplicate_ep_rate']:.4f}}}}}",
         f"\\newcommand{{\\ChaosHashStrict}}{{\\ensuremath{{{m6['content_hash']['strict_e2e_correct_rate']:.4f}}}}}",
         f"\\newcommand{{\\ChaosPosDup}}{{\\ensuremath{{{m6['deterministic_pos']['duplicate_ep_rate']:.4f}}}}}",
+        f"\\newcommand{{\\ChaosPosOmit}}{{\\ensuremath{{{m6['deterministic_pos']['missing_ep_rate']:.4f}}}}}",
         f"\\newcommand{{\\ChaosPosStrict}}{{\\ensuremath{{{m6['deterministic_pos']['strict_e2e_correct_rate']:.4f}}}}}",
         f"\\newcommand{{\\ChaosRemitDup}}{{\\ensuremath{{{m6['ckpt_ledger']['duplicate_ep_rate']:.4f}}}}}",
+        f"\\newcommand{{\\ChaosRemitOmit}}{{\\ensuremath{{{m6['ckpt_ledger']['missing_ep_rate']:.4f}}}}}",
         f"\\newcommand{{\\ChaosRemitStrict}}{{\\ensuremath{{{m6['ckpt_ledger']['strict_e2e_correct_rate']:.4f}}}}}",
         f"\\newcommand{{\\ChaosCanonDup}}{{\\ensuremath{{{m6['det_canonical']['duplicate_ep_rate']:.4f}}}}}",
         f"\\newcommand{{\\ChaosCanonPay}}{{\\ensuremath{{{m6['det_canonical']['payload_continuity_rate']:.4f}}}}}",
@@ -66,6 +72,14 @@ def main() -> None:
         f"\\newcommand{{\\ScaleTenKSpeedup}}{{\\ensuremath{{{int(round(scale_10k['lookup_speedup_vs_legacy'])):,}\\times}}}}",
         f"\\newcommand{{\\HttpPeakOps}}{{\\ensuremath{{{http_map[4]['throughput_ops_s']:,.1f}}}}}",
         f"\\newcommand{{\\HttpThirtyTwoOps}}{{\\ensuremath{{{http_map[32]['throughput_ops_s']:,.1f}}}}}",
+        f"\\newcommand{{\\LatNetClaimPFifty}}{{\\ensuremath{{{net_lat['claim_p50_ms']:.2f}\\,\\mathrm{{ms}}}}}}",
+        f"\\newcommand{{\\LatNetCommitPFifty}}{{\\ensuremath{{{net_lat['commit_p50_ms']:.2f}\\,\\mathrm{{ms}}}}}}",
+        f"\\newcommand{{\\LatNetStepPFifty}}{{\\ensuremath{{{net_lat['step_total_p50_ms']:.2f}\\,\\mathrm{{ms}}}}}}",
+        f"\\newcommand{{\\LatNetStepPNN}}{{\\ensuremath{{{net_lat['step_total_p99_ms']:.2f}\\,\\mathrm{{ms}}}}}}",
+        f"\\newcommand{{\\LatNetLookupUs}}{{\\ensuremath{{{net_lat['lookup_10k_p50_ms'] * 1000:.0f}\\,\\mu\\mathrm{{s}}}}}}",
+        f"\\newcommand{{\\ProxyLegacyCrashDup}}{{\\ensuremath{{{px_map['legacy_non_idem_with_proxy_crash']['duplicate_ep_rate']:.4f}}}}}",
+        f"\\newcommand{{\\AFourUnguardedDup}}{{\\ensuremath{{{a4_map['a4_violated_false_occ_increment_unguarded']['duplicate_ep_rate']:.4f}}}}}",
+        f"\\newcommand{{\\AFourBlockedCnt}}{{\\ensuremath{{{a4_map['a4_violated_false_occ_increment_policy_guarded']['policy_blocked_hallucinations']}}}}}",
         "",
         "% Multi-Model Real SIGKILL Table Rows",
     ]

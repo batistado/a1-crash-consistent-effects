@@ -285,7 +285,9 @@ class SQLiteWALClaimStore:
     def __init__(self, db_path: str) -> None:
         self.db_path = os.path.abspath(db_path)
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
-        self._conn = sqlite3.connect(self.db_path, timeout=30.0, isolation_level=None)
+        self._conn = sqlite3.connect(
+            self.db_path, timeout=30.0, isolation_level=None, check_same_thread=False
+        )
         self._conn.execute("PRAGMA journal_mode=WAL;")
         self._conn.execute("PRAGMA synchronous=FULL;")
         self._conn.execute(

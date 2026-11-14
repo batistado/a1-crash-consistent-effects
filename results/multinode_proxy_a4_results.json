@@ -1,0 +1,62 @@
+{
+  "elapsed_sec": 19.7,
+  "multinode_http_claim_store": {
+    "latency_ms": {
+      "claim_p50_ms": 0.221,
+      "commit_p50_ms": 0.161,
+      "ckpt_p50_ms": 0.427,
+      "step_total_p50_ms": 0.814,
+      "step_total_p99_ms": 1.091,
+      "lookup_10k_p50_ms": 0.128
+    },
+    "failover_500": {
+      "episodes": 500,
+      "duplicate_ep_rate": 0.0,
+      "strict_e2e_rate": 1.0,
+      "fenced_zombie_probes": 135
+    }
+  },
+  "outbox_proxy_evaluation": {
+    "stripe_idem_upstream_with_proxy_crash": {
+      "episodes": 300,
+      "upstream_supports_idempotency_key": true,
+      "proxy_crash_prob_in_w_proxy": 0.2,
+      "duplicate_ep_rate": 0.0,
+      "strict_e2e_rate": 1.0
+    },
+    "legacy_non_idem_worker_faults_only": {
+      "episodes": 300,
+      "upstream_supports_idempotency_key": false,
+      "proxy_crash_prob_in_w_proxy": 0.0,
+      "duplicate_ep_rate": 0.0,
+      "strict_e2e_rate": 1.0
+    },
+    "legacy_non_idem_with_proxy_crash": {
+      "episodes": 300,
+      "upstream_supports_idempotency_key": false,
+      "proxy_crash_prob_in_w_proxy": 0.2,
+      "duplicate_ep_rate": 0.22,
+      "strict_e2e_rate": 0.78
+    }
+  },
+  "a4_extractor_evaluation": {
+    "a4_compliant_paraphrase_and_reemit": {
+      "episodes": 500,
+      "duplicate_ep_rate": 0.0,
+      "strict_e2e_rate": 1.0,
+      "policy_blocked_hallucinations": 0
+    },
+    "a4_violated_false_occ_increment_unguarded": {
+      "episodes": 500,
+      "duplicate_ep_rate": 0.242,
+      "strict_e2e_rate": 0.758,
+      "policy_blocked_hallucinations": 0
+    },
+    "a4_violated_false_occ_increment_policy_guarded": {
+      "episodes": 500,
+      "duplicate_ep_rate": 0.0,
+      "strict_e2e_rate": 1.0,
+      "policy_blocked_hallucinations": 121
+    }
+  }
+}
