@@ -1,0 +1,163 @@
+{
+  "episodes_per_model_per_arch": 20,
+  "total_sigkill_episodes": 240,
+  "elapsed_s": 8392.52,
+  "models": [
+    {
+      "model_id": "Qwen/Qwen2.5-3B-Instruct",
+      "device": "mps",
+      "load_s": 12.76,
+      "live_gpu_calls": 345,
+      "paired_cache_hits": 257,
+      "total_generated_tokens": 19282,
+      "gen_latency_p50_ms": 4923.1,
+      "gen_latency_p95_ms": 5937.7,
+      "architectures": {
+        "baseline": {
+          "episodes": 20,
+          "sigkill_rate": 1.0,
+          "duplicate_ep_rate": 1.0,
+          "missing_ep_rate": 0.0,
+          "exactly_once_rate": 0.0,
+          "payload_continuity_rate": 0.15,
+          "strict_e2e_rate": 0.0,
+          "organic_plan_shift_rate": 0.8,
+          "organic_reword_rate": 0.9
+        },
+        "content_hash": {
+          "episodes": 20,
+          "sigkill_rate": 1.0,
+          "duplicate_ep_rate": 0.9,
+          "missing_ep_rate": 0.0,
+          "exactly_once_rate": 0.1,
+          "payload_continuity_rate": 0.15,
+          "strict_e2e_rate": 0.0,
+          "organic_plan_shift_rate": 0.85,
+          "organic_reword_rate": 0.9
+        },
+        "deterministic_pos": {
+          "episodes": 20,
+          "sigkill_rate": 1.0,
+          "duplicate_ep_rate": 0.95,
+          "missing_ep_rate": 0.0,
+          "exactly_once_rate": 0.05,
+          "payload_continuity_rate": 0.15,
+          "strict_e2e_rate": 0.0,
+          "organic_plan_shift_rate": 0.8,
+          "organic_reword_rate": 0.9
+        },
+        "ckpt_ledger": {
+          "episodes": 20,
+          "sigkill_rate": 1.0,
+          "duplicate_ep_rate": 0.95,
+          "missing_ep_rate": 0.0,
+          "exactly_once_rate": 0.05,
+          "payload_continuity_rate": 0.15,
+          "strict_e2e_rate": 0.0,
+          "organic_plan_shift_rate": 0.8,
+          "organic_reword_rate": 0.9
+        },
+        "det_canonical": {
+          "episodes": 20,
+          "sigkill_rate": 1.0,
+          "duplicate_ep_rate": 0.0,
+          "missing_ep_rate": 0.0,
+          "exactly_once_rate": 1.0,
+          "payload_continuity_rate": 0.15,
+          "strict_e2e_rate": 0.15,
+          "organic_plan_shift_rate": 0.8,
+          "organic_reword_rate": 0.9
+        },
+        "claimfence": {
+          "episodes": 20,
+          "sigkill_rate": 1.0,
+          "duplicate_ep_rate": 0.0,
+          "missing_ep_rate": 0.0,
+          "exactly_once_rate": 1.0,
+          "payload_continuity_rate": 1.0,
+          "strict_e2e_rate": 1.0,
+          "organic_plan_shift_rate": 0.0,
+          "organic_reword_rate": 0.0
+        }
+      }
+    },
+    {
+      "model_id": "Qwen/Qwen2.5-7B-Instruct",
+      "device": "mps",
+      "load_s": 22.0,
+      "live_gpu_calls": 318,
+      "paired_cache_hits": 262,
+      "total_generated_tokens": 17171,
+      "gen_latency_p50_ms": 6357.6,
+      "gen_latency_p95_ms": 7102.0,
+      "architectures": {
+        "baseline": {
+          "episodes": 20,
+          "sigkill_rate": 1.0,
+          "duplicate_ep_rate": 1.0,
+          "missing_ep_rate": 0.0,
+          "exactly_once_rate": 0.0,
+          "payload_continuity_rate": 0.2,
+          "strict_e2e_rate": 0.0,
+          "organic_plan_shift_rate": 0.0,
+          "organic_reword_rate": 0.9
+        },
+        "content_hash": {
+          "episodes": 20,
+          "sigkill_rate": 1.0,
+          "duplicate_ep_rate": 0.9,
+          "missing_ep_rate": 0.0,
+          "exactly_once_rate": 0.1,
+          "payload_continuity_rate": 0.2,
+          "strict_e2e_rate": 0.0,
+          "organic_plan_shift_rate": 0.0,
+          "organic_reword_rate": 0.9
+        },
+        "deterministic_pos": {
+          "episodes": 20,
+          "sigkill_rate": 1.0,
+          "duplicate_ep_rate": 0.2,
+          "missing_ep_rate": 0.0,
+          "exactly_once_rate": 0.8,
+          "payload_continuity_rate": 0.2,
+          "strict_e2e_rate": 0.0,
+          "organic_plan_shift_rate": 0.0,
+          "organic_reword_rate": 0.9
+        },
+        "ckpt_ledger": {
+          "episodes": 20,
+          "sigkill_rate": 1.0,
+          "duplicate_ep_rate": 0.2,
+          "missing_ep_rate": 0.0,
+          "exactly_once_rate": 0.8,
+          "payload_continuity_rate": 0.2,
+          "strict_e2e_rate": 0.0,
+          "organic_plan_shift_rate": 0.0,
+          "organic_reword_rate": 0.9
+        },
+        "det_canonical": {
+          "episodes": 20,
+          "sigkill_rate": 1.0,
+          "duplicate_ep_rate": 0.0,
+          "missing_ep_rate": 0.0,
+          "exactly_once_rate": 1.0,
+          "payload_continuity_rate": 0.2,
+          "strict_e2e_rate": 0.2,
+          "organic_plan_shift_rate": 0.0,
+          "organic_reword_rate": 0.9
+        },
+        "claimfence": {
+          "episodes": 20,
+          "sigkill_rate": 1.0,
+          "duplicate_ep_rate": 0.0,
+          "missing_ep_rate": 0.0,
+          "exactly_once_rate": 1.0,
+          "payload_continuity_rate": 1.0,
+          "strict_e2e_rate": 1.0,
+          "organic_plan_shift_rate": 0.0,
+          "organic_reword_rate": 0.0
+        }
+      }
+    }
+  ]
+}

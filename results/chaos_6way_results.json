@@ -1,0 +1,178 @@
+{
+  "seed": 20261114,
+  "episodes_per_condition": 1500,
+  "sweep_episodes_per_point": 1000,
+  "main_6way": {
+    "baseline": {
+      "episodes": 1500,
+      "duplicate_ep_rate": 0.7947,
+      "missing_ep_rate": 0.0,
+      "exactly_once_rate": 0.2053,
+      "payload_continuity_rate": 0.6613,
+      "strict_e2e_correct_rate": 0.2053,
+      "mean_duplicates_per_ep": 1.1767,
+      "fenced_rejections": 0
+    },
+    "content_hash": {
+      "episodes": 1500,
+      "duplicate_ep_rate": 0.5367,
+      "missing_ep_rate": 0.0,
+      "exactly_once_rate": 0.4633,
+      "payload_continuity_rate": 0.6613,
+      "strict_e2e_correct_rate": 0.3473,
+      "mean_duplicates_per_ep": 0.7287,
+      "fenced_rejections": 0
+    },
+    "deterministic_pos": {
+      "episodes": 1500,
+      "duplicate_ep_rate": 0.4213,
+      "missing_ep_rate": 0.0107,
+      "exactly_once_rate": 0.5787,
+      "payload_continuity_rate": 0.658,
+      "strict_e2e_correct_rate": 0.4133,
+      "mean_duplicates_per_ep": 0.5273,
+      "fenced_rejections": 0
+    },
+    "ckpt_ledger": {
+      "episodes": 1500,
+      "duplicate_ep_rate": 0.4213,
+      "missing_ep_rate": 0.0107,
+      "exactly_once_rate": 0.5787,
+      "payload_continuity_rate": 0.658,
+      "strict_e2e_correct_rate": 0.4133,
+      "mean_duplicates_per_ep": 0.5273,
+      "fenced_rejections": 0
+    },
+    "det_canonical": {
+      "episodes": 1500,
+      "duplicate_ep_rate": 0.274,
+      "missing_ep_rate": 0.0,
+      "exactly_once_rate": 0.726,
+      "payload_continuity_rate": 0.6613,
+      "strict_e2e_correct_rate": 0.496,
+      "mean_duplicates_per_ep": 0.274,
+      "fenced_rejections": 0
+    },
+    "claimfence": {
+      "episodes": 1500,
+      "duplicate_ep_rate": 0.0,
+      "missing_ep_rate": 0.0,
+      "exactly_once_rate": 1.0,
+      "payload_continuity_rate": 1.0,
+      "strict_e2e_correct_rate": 1.0,
+      "mean_duplicates_per_ep": 0.0,
+      "fenced_rejections": 411
+    }
+  },
+  "multi_crash_sweep": {
+    "baseline": {
+      "1": {
+        "duplicate_ep_rate": 0.826,
+        "strict_e2e_correct_rate": 0.174
+      },
+      "2": {
+        "duplicate_ep_rate": 0.964,
+        "strict_e2e_correct_rate": 0.036
+      },
+      "3": {
+        "duplicate_ep_rate": 0.994,
+        "strict_e2e_correct_rate": 0.006
+      },
+      "4": {
+        "duplicate_ep_rate": 1.0,
+        "strict_e2e_correct_rate": 0.0
+      }
+    },
+    "content_hash": {
+      "1": {
+        "duplicate_ep_rate": 0.549,
+        "strict_e2e_correct_rate": 0.327
+      },
+      "2": {
+        "duplicate_ep_rate": 0.796,
+        "strict_e2e_correct_rate": 0.107
+      },
+      "3": {
+        "duplicate_ep_rate": 0.925,
+        "strict_e2e_correct_rate": 0.026
+      },
+      "4": {
+        "duplicate_ep_rate": 0.972,
+        "strict_e2e_correct_rate": 0.012
+      }
+    },
+    "deterministic_pos": {
+      "1": {
+        "duplicate_ep_rate": 0.446,
+        "strict_e2e_correct_rate": 0.377
+      },
+      "2": {
+        "duplicate_ep_rate": 0.682,
+        "strict_e2e_correct_rate": 0.158
+      },
+      "3": {
+        "duplicate_ep_rate": 0.834,
+        "strict_e2e_correct_rate": 0.052
+      },
+      "4": {
+        "duplicate_ep_rate": 0.912,
+        "strict_e2e_correct_rate": 0.017
+      }
+    },
+    "ckpt_ledger": {
+      "1": {
+        "duplicate_ep_rate": 0.446,
+        "strict_e2e_correct_rate": 0.377
+      },
+      "2": {
+        "duplicate_ep_rate": 0.682,
+        "strict_e2e_correct_rate": 0.158
+      },
+      "3": {
+        "duplicate_ep_rate": 0.834,
+        "strict_e2e_correct_rate": 0.052
+      },
+      "4": {
+        "duplicate_ep_rate": 0.912,
+        "strict_e2e_correct_rate": 0.017
+      }
+    },
+    "det_canonical": {
+      "1": {
+        "duplicate_ep_rate": 0.276,
+        "strict_e2e_correct_rate": 0.464
+      },
+      "2": {
+        "duplicate_ep_rate": 0.486,
+        "strict_e2e_correct_rate": 0.219
+      },
+      "3": {
+        "duplicate_ep_rate": 0.679,
+        "strict_e2e_correct_rate": 0.079
+      },
+      "4": {
+        "duplicate_ep_rate": 0.759,
+        "strict_e2e_correct_rate": 0.04
+      }
+    },
+    "claimfence": {
+      "1": {
+        "duplicate_ep_rate": 0.0,
+        "strict_e2e_correct_rate": 1.0
+      },
+      "2": {
+        "duplicate_ep_rate": 0.0,
+        "strict_e2e_correct_rate": 1.0
+      },
+      "3": {
+        "duplicate_ep_rate": 0.0,
+        "strict_e2e_correct_rate": 1.0
+      },
+      "4": {
+        "duplicate_ep_rate": 0.0,
+        "strict_e2e_correct_rate": 1.0
+      }
+    }
+  },
+  "elapsed_s": 30.42
+}

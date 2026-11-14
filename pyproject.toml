@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "claimfence"
+version = "2.0.0"
+description = "ClaimFence: Crash-consistent write-ahead effect-claim logging, atomic lease fencing, and payload-preserving reconciliation for distributed agent workflows."
+readme = "README.md"
+license = {text = "Apache-2.0"}
+requires-python = ">=3.10"
+authors = [
+  {name = "Mohammed Kamran Syed", email = "mohammedkamran.syed@ieee.org"},
+  {name = "Anudeep Rentala", email = "anudeep.rentala@ieee.org"},
+  {name = "Somesh Rahul", email = "someshrahul@ieee.org"},
+  {name = "Raghuram Malpe Pai", email = "raghuram.pai@ieee.org"},
+  {name = "Krishna Suman Dara", email = "Krishna-suman.dara@ieee.org"},
+]
+keywords = [
+  "distributed-systems",
+  "crash-consistency",
+  "write-ahead-logging",
+  "exactly-once",
+  "epoch-fencing",
+  "workflow-orchestration",
+  "llm-agents",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "matplotlib>=3.7", "numpy>=1.24"]
+llm = ["torch>=2.2", "transformers>=4.45", "accelerate>=0.30"]
+langgraph = ["langgraph>=0.2", "langgraph-checkpoint-sqlite>=1.0", "requests>=2.31"]
+
+[tool.setuptools.packages.find]
+include = ["claimfence*"]

@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use ClaimFence or its crash-recovery benchmarks in your research, please cite our work."
+title: "ClaimFence: Write-Ahead Effect-Claim Logging, Atomic Epoch-Lease Fencing, and Payload-Preserving Reconciliation for Crash-Consistent Distributed Agent Workflows"
+version: 2.0.0
+date-released: 2026-11-14
+license: Apache-2.0
+repository-code: "https://github.com/batistado/a1-crash-consistent-effects"
+url: "https://huggingface.co/datasets/batistado/a1-crash-recovery-results"
+authors:
+  - family-names: Syed
+    given-names: Mohammed Kamran
+    email: mohammedkamran.syed@ieee.org
+    orcid: "https://orcid.org/0009-0009-9058-5375"
+  - family-names: Rentala
+    given-names: Anudeep
+    email: anudeep.rentala@ieee.org
+    orcid: "https://orcid.org/0009-0008-8902-1751"
+  - family-names: Rahul
+    given-names: Somesh
+    email: someshrahul@ieee.org
+    orcid: "https://orcid.org/0009-0001-9297-8254"
+  - family-names: Pai
+    given-names: Raghuram Malpe
+    email: raghuram.pai@ieee.org
+    orcid: "https://orcid.org/0009-0001-9617-9484"
+  - family-names: Dara
+    given-names: Krishna Suman
+    email: Krishna-suman.dara@ieee.org
+    orcid: "https://orcid.org/0009-0005-4370-2349"

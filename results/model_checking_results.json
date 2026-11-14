@@ -1,0 +1,199 @@
+{
+  "models": [
+    {
+      "protocol": "trajectory_ckpt_only",
+      "reachable_states": 319,
+      "transitions_explored": 560,
+      "terminal_states": 21,
+      "safety_duplicate_states": 192,
+      "terminal_exact_once_violations": 18,
+      "terminal_payload_loss_violations": 14,
+      "all_invariants_hold": false,
+      "shortest_counterexamples": {
+        "I1_duplicate_commit": [
+          "W0_prepare_s0",
+          "W0_call_s0(None)->committed",
+          "CRASH_in_window_with_zombie",
+          "R1_start_unfenced",
+          "ZOMBIE_late_arrival(None,e=0)->committed"
+        ],
+        "I2_exact_completion": [
+          "W0_prepare_s0",
+          "W0_call_s0(None)->committed",
+          "CRASH_in_window_W(s)",
+          "R1_start_unfenced",
+          "R1_reconcile_noop",
+          "R1_replan_s0(None)->committed",
+          "R1_mint_s1(None)",
+          "R1_call_s1(tok=tok_2)->committed",
+          "single_recovery_complete"
+        ],
+        "I3_payload_continuity": [
+          "W0_prepare_s0",
+          "W0_call_s0(None)->committed",
+          "CRASH_in_window_W(s)",
+          "R1_start_unfenced",
+          "R1_reconcile_noop",
+          "R1_replan_s0(None)->committed",
+          "R1_mint_s1(None)",
+          "R1_call_s1(tok=tok_2)->committed",
+          "single_recovery_complete"
+        ]
+      },
+      "elapsed_ms": 2.8
+    },
+    {
+      "protocol": "keys_only_mutable",
+      "reachable_states": 378,
+      "transitions_explored": 626,
+      "terminal_states": 39,
+      "safety_duplicate_states": 245,
+      "terminal_exact_once_violations": 36,
+      "terminal_payload_loss_violations": 28,
+      "all_invariants_hold": false,
+      "shortest_counterexamples": {
+        "I1_duplicate_commit": [
+          "W0_prepare_s0",
+          "W0_call_s0(k_orig)->committed",
+          "CRASH_in_window_with_zombie",
+          "R1_start_unfenced",
+          "ZOMBIE_late_arrival(k_zombie_fresh,e=0)->committed"
+        ],
+        "I2_exact_completion": [
+          "W0_prepare_s0",
+          "W0_call_s0(k_orig)->committed",
+          "CRASH_in_window_W(s)",
+          "R1_start_unfenced",
+          "R1_reconcile_noop",
+          "R1_replan_s0(k_replan_R1)->committed",
+          "R1_mint_s1(uuid_s1_R1)",
+          "R1_call_s1(tok=tok_2)->committed",
+          "single_recovery_complete"
+        ],
+        "I3_payload_continuity": [
+          "W0_prepare_s0",
+          "W0_call_s0(k_orig)->committed",
+          "CRASH_in_window_W(s)",
+          "R1_start_unfenced",
+          "R1_reconcile_noop",
+          "R1_replan_s0(k_replan_R1)->committed",
+          "R1_mint_s1(uuid_s1_R1)",
+          "R1_call_s1(tok=tok_2)->committed",
+          "single_recovery_complete"
+        ]
+      },
+      "elapsed_ms": 3.12
+    },
+    {
+      "protocol": "ckpt_time_ledger",
+      "reachable_states": 378,
+      "transitions_explored": 626,
+      "terminal_states": 39,
+      "safety_duplicate_states": 245,
+      "terminal_exact_once_violations": 36,
+      "terminal_payload_loss_violations": 25,
+      "all_invariants_hold": false,
+      "shortest_counterexamples": {
+        "I1_duplicate_commit": [
+          "W0_prepare_s0",
+          "W0_call_s0(k_orig)->committed",
+          "CRASH_in_window_with_zombie",
+          "R1_start_unfenced",
+          "ZOMBIE_late_arrival(k_zombie_fresh,e=0)->committed"
+        ],
+        "I2_exact_completion": [
+          "W0_prepare_s0",
+          "W0_call_s0(k_orig)->committed",
+          "CRASH_in_window_W(s)",
+          "R1_start_unfenced",
+          "R1_reconcile_noop",
+          "R1_replan_s0(k_replan_R1)->committed",
+          "R1_mint_s1(uuid_s1_R1)",
+          "R1_call_s1(tok=tok_2)->committed",
+          "single_recovery_complete"
+        ],
+        "I3_payload_continuity": [
+          "W0_prepare_s0",
+          "W0_call_s0(k_orig)->committed",
+          "CRASH_in_window_W(s)",
+          "R1_start_unfenced",
+          "R1_reconcile_noop",
+          "R1_replan_s0(k_replan_R1)->committed",
+          "R1_mint_s1(uuid_s1_R1)",
+          "R1_call_s1(tok=tok_2)->committed",
+          "single_recovery_complete"
+        ]
+      },
+      "elapsed_ms": 3.07
+    },
+    {
+      "protocol": "wal_v1_nonatomic_status",
+      "reachable_states": 499,
+      "transitions_explored": 953,
+      "terminal_states": 21,
+      "safety_duplicate_states": 19,
+      "terminal_exact_once_violations": 11,
+      "terminal_payload_loss_violations": 12,
+      "all_invariants_hold": false,
+      "shortest_counterexamples": {
+        "I3_payload_continuity": [
+          "W0_claim_s0(k_orig)",
+          "W0_call_s0(k_orig)->committed",
+          "CRASH_in_window_W(s)",
+          "R1_read_local_epoch->1",
+          "R1_register_client_fence(e=1)",
+          "R1_reconcile_s0->duplicate_suppressed",
+          "R1_skip_settled_s0",
+          "R1_mint_s1(uuid_s1_R1)",
+          "R1_call_s1(tok=None)->committed",
+          "single_recovery_complete"
+        ],
+        "I1_duplicate_commit": [
+          "W0_claim_s0(k_orig)",
+          "CRASH_pre_call",
+          "R1_read_local_epoch->1",
+          "R1_register_client_fence(e=1)",
+          "R1_reconcile_s0->committed",
+          "R1_skip_settled_s0",
+          "R1_mint_s1(uuid_s1_R1)",
+          "R1_call_s1(tok=tok_1)->committed",
+          "R2_read_local_epoch->2",
+          "R2_register_client_fence(e=2)",
+          "R2_reconcile_noop",
+          "R2_skip_settled_s0",
+          "R2_mint_s1(uuid_s1_R2)",
+          "R2_call_s1(tok=None)->committed"
+        ],
+        "I2_exact_completion": [
+          "W0_claim_s0(k_orig)",
+          "CRASH_pre_call",
+          "R1_read_local_epoch->1",
+          "R1_register_client_fence(e=1)",
+          "R1_reconcile_s0->committed",
+          "R1_skip_settled_s0",
+          "R1_mint_s1(uuid_s1_R1)",
+          "R1_call_s1(tok=tok_1)->committed",
+          "R2_read_local_epoch->2",
+          "R2_register_client_fence(e=2)",
+          "R2_reconcile_noop",
+          "R2_skip_settled_s0",
+          "R2_mint_s1(uuid_s1_R2)",
+          "R2_call_s1(tok=None)->committed"
+        ]
+      },
+      "elapsed_ms": 4.15
+    },
+    {
+      "protocol": "claimfence_full",
+      "reachable_states": 149,
+      "transitions_explored": 259,
+      "terminal_states": 10,
+      "safety_duplicate_states": 0,
+      "terminal_exact_once_violations": 0,
+      "terminal_payload_loss_violations": 0,
+      "all_invariants_hold": true,
+      "shortest_counterexamples": {},
+      "elapsed_ms": 1.24
+    }
+  ]
+}

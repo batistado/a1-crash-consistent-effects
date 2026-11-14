@@ -1,62 +1,56 @@
-# A1 — Crash-consistent checkpointing for exactly-once agent effects
+# ClaimFence: Crash-Consistent Distributed Agent Workflows
 
-Agent harnesses checkpoint *trajectories*, not *effect commitments*. When a process crashes in the window between a tool-effect commit and the harness checkpoint write, the resumed agent re-fires the tool — a duplicate side effect (the "double refund" window). Idempotency keys alone cannot close this window in general: content-hash keys break when the recovered agent rewords arguments on retry, and deterministic `(workflow_id, step_index, action)` keys break when recovery replanning shifts step indices. The fix proposed here is a **write-ahead effect-claim log** — the claim and key are logged *before* the tool is invoked — with checkpoints fenced by the log and a fencing epoch against stale writers. Recovery then reconciles from the log first and achieves exactly-once.
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Dataset](https://img.shields.io/badge/HuggingFace-Dataset-yellow)](https://huggingface.co/datasets/batistado/a1-crash-recovery-results)
 
-This is fault-tolerance/systems work: benign chaos-style fault injection (process crash mid-workflow), in the tradition of HPC checkpoint/restart studies. There is no adversary and no attack simulation.
+**ClaimFence** is a crash-consistent execution middleware for distributed cloud and LLM agent workflows that invoke stateful external tools and microservices.
 
-**Novelty (second-pass verification: PASS, 2026-10-07).**
-Full report: `~/workspace/research_notes/agent-systems-research-ideas-20261007-0317/a1-overlap-verification.md`.
-- **LIMBO** (arXiv:2609.29095): idempotency keys cut duplicates 28%→4%, but all 12 fault modes are injected at the service boundary; the full text contains zero mentions of "crash"/"write-ahead". The harness-crash window is untested.
-- **ACRFence** (arXiv:2603.20625): checkpoint-restore duplicates, but with an adversarial framing (rollback attacks) and replay-or-fork mitigation — different problem, different mechanism. Nearest neighbor; cite, don't fear.
-- **AgentRewind** (arXiv:2608.14380): backward undo of context/workspace; explicitly cannot undo external effects. Different direction.
-- Prior WAL-for-agents formulations exist only as engineering folklore (GitHub roadmaps, design docs, blog posts) — no paper, no measurement.
-- Target venue: **IEEE TPDS (Q1)** — crash consistency, exactly-once processing, and fencing are its native vocabulary.
+Existing agent orchestration frameworks (`LangGraph`, `CrewAI`, `AutoGen`, cloud agent SDKs) checkpoint *conversation trajectories* at superstep boundaries rather than *external effect commitments*. When a worker crashes inside the harness crash window $W(s) = (t_{\mathrm{commit}}(s), t_{\mathrm{ckpt}}(s))$—after an external service commits a mutation but before the checkpoint advances—restarted LLM planners paraphrase tool arguments (breaking content-hash keys), insert diagnostic steps that shift positional indices (breaking positional keys and post-call checkpoint ledgers), and lose volatile return tokens required by downstream workflow stages.
 
-## Experiment plan (cheapest first)
+## Key Capabilities
 
-1. `src/sandbox.py` — scripted agents run 4–8-step workflows (read-only + effectful steps: `issue_refund` / `send_email` / `update_record`) against mocked tools. Tools are atomic idempotent receivers and record every committed effect in an append-only ledger (ground truth).
-2. Fault injection: harness-process crash at a random effectful step; the crash lands in-window (after tool commit, before checkpoint write) 75% of the time, else at safe points. In-memory state is discarded; the agent resumes from the last durable checkpoint.
-3. Conditions (1500 episodes each):
-   - (i) baseline: resume-from-checkpoint, no keys;
-   - (ii-a) + content-hash idempotency keys;
-   - (ii-b) + deterministic `(workflow_id, step_index, action)` keys;
-   - (iii) + write-ahead effect-claim log, log-fenced checkpoints, fencing epoch.
-4. Recovery replanning is nondeterministic (reworded args 50%, plan shift 30%), modeling LLM re-synthesis after restore.
-5. Metrics → `results.json`: duplicate-effect rate, exactly-once rate, mean duplicates/episode, crash-landing fractions, zombie-probe fencing count.
+1. **Concurrency-Safe $O(1)$ Write-Ahead Claim Stores (`claimfence/claim_store.py`):**
+   - `IndexedJSONLClaimStore`: Append-only log with `O(1)` hash lookup (`2.17 µs` at `10,000` claims — `12,987x` faster than unindexed JSONL scanning), incremental cross-process tail refresh, ARIES-style torn-tail truncation, POSIX `fcntl.flock` serialization across concurrent workers, and optional physical NAND flush (`F_FULLFSYNC`).
+   - `SQLiteWALClaimStore`: Transactional SQLite WAL backend (`PRAGMA journal_mode=WAL; synchronous=FULL`) with `0.37 ms` per-step write latency.
+2. **Server-Enforced Atomic `CAS_inc` Epoch-Lease Fencing (`claimfence/receiver.py`):**
+   - Atomically increments `(max_epoch[wid], holder)` at the service boundary, rejecting delayed zombie workers (`HTTP 409`) and serializing concurrent dual-recovery instances without client-side race windows.
+3. **Payload-Preserving Reconciliation-First Recovery (`claimfence/reconciler.py`):**
+   - Replays uncommitted pre-crash claims with their frozen keys *before* consulting the LLM planner and restores RIFL-complete return payloads (`receipt_token`) to downstream dependent workflow stages.
+4. **Exhaustive Finite-State Model Checker (`benchmarks/model_check_protocol.py`):**
+   - Explores 100% of reachable asynchronous crash, zombie, and dual-recovery interleavings (`149` states, `259` transitions), verifying zero safety, completion, or payload-loss violations.
 
-Run: `bash run.sh` → `results.json`.
+## Repository Structure
 
-**Expected result.** Baseline duplicates at roughly the in-window crash rate; content-hash keys still duplicate on reworded retries; deterministic keys still duplicate on shifted plans; the write-ahead log reconciles from the log with original keys and reaches ~100% exactly-once. The paper's headline: keys alone are fragile to how the retry re-derives the key; the log makes recovery independent of the agent's re-derivation.
+- `claimfence/` — Core `ClaimFence` v2.0 Python package (`IndexedJSONLClaimStore`, `SQLiteWALClaimStore`, `AtomicIdempotentReceiver`, `ClaimFenceRuntime`).
+- `benchmarks/` — Reproducible verification and benchmark suite:
+  - `model_check_protocol.py` — Exhaustive BFS finite-state model checker across 5 protocol designs.
+  - `run_chaos_6way.py` — `33,000`-episode paired 6-architecture chaos & multi-crash horizon ($k \in \{1..4\}$) suite.
+  - `run_multimodel_sigkill.py` — Live Apple Silicon (`MPS` FP16) real OS `SIGKILL` evaluation across `Qwen2.5-3B-Instruct`, `Qwen2.5-7B-Instruct`, and `Qwen2.5-Coder-14B-Instruct`.
+  - `run_storage_scaling.py` — Persistent NVMe write-path breakdown (`os.fsync`, `F_FULLFSYNC`, `SQLite-WAL`), lookup scaling ($N = 100..10{,}000$), and `K = 1..32` concurrent workflow load tests.
+- `langgraph_port/` — Production `LangGraph` `StateGraph` (`v1` linear and `v2` conditional supervisor + parallel `Send` subgraphs + `E1–E5` boundary experiments).
+- `src/` — Standalone sandbox and `OpenAI` (`gpt-4o-mini`, `gpt-4.1-mini`) recovery-prompt ablation drivers.
+- `tests/` — `pytest` unit, crash-window, torn-tail, multi-worker contention, and dual-recovery test suite.
+- `paper/` — Archival manuscript (`main.tex`, `main.pdf`), Elsevier FGCS `highlights.tex` / `highlights.pdf`, vector figures, and static validator.
 
-## Status (2026-10-07)
+## Quick Start
 
-- [x] Scaffold written (sandbox, run.sh, DESIGN.md)
-- [x] ORX project registered
-- [x] Baseline run, 1500 episodes/condition (`results.json`) — baseline dup 0.769, deterministic keys 0.211, WAL **0.000**
-- [x] LLM-in-the-loop validation: gpt-4o-mini 70 eps (0 dups, 94.29% exactly-once), gpt-4.1-mini 70/70
-- [x] Component ablations (fencing-off → 0.4927 dups; claim-log-off regresses), tight-prompt ablation, overhead (~52 ms/step)
-- [x] LangGraph v1 production port — real StateGraph, real SIGKILL, 180 eps (`langgraph_port/LANGGRAPH_PORT.md`)
-- [x] LangGraph v2 richer graph — branching, parallel fan-out/fan-in, retries; 60 eps/condition, WAL 0.000 dups / 1.000 exactly-once, baseline 0.80 dups (`langgraph_port/LANGGRAPH_PORT_V2.md`)
-- [ ] Real-LLM supervisor v2 run (gpt-4o-mini planner, claim log kept from model; $5 cap) — in progress
-- [ ] IEEEtran TPDS manuscript
+```bash
+# Run unit & concurrency stress tests
+pytest tests/test_claimfence.py -v
 
-## IEEE TPDS readiness checklist
+# Run exhaustive finite-state model checker
+python3 benchmarks/model_check_protocol.py
 
-Tracked here explicitly; audited 2026-10-07 against the actual files.
+# Run 6-architecture multi-crash chaos suite
+python3 benchmarks/run_chaos_6way.py
 
-| # | Item | Status |
-|---|---|---|
-| 1 | Research quality gate (Q1 venue, genuine novelty, no published overlap, feasible eval, EB-1A caliber) | ✅ PASS |
-| 2 | Novelty re-verification (3 independent checks; LIMBO/ACRFence/AgentRewind as must-cites) | ✅ PASS |
-| 3 | Core evidence: 1,500 eps/condition, write-ahead log at 0 duplicates | ✅ |
-| 4 | Component ablations (every piece load-bearing) | ✅ |
-| 5 | Two-model LLM validation (single-vendor caveat → one honest limitations sentence) | ✅ |
-| 6 | Production-shaped graph, real crashes (LangGraph v1 + v2) | ✅ |
-| 7 | Real-LLM supervisor run (uniform + mixed: 135 escalate / 79 fan_out, 0 fallbacks) | ✅ |
-| 8 | IEEEtran manuscript | ⬜ not started — **critical path** (parked per Mohammed 2026-10-07, B1 first) |
-| 9 | DESIGN_V2.md wording ("scripted planner" → LLM planner, once run 7 lands) | ✅ |
-| 10 | Humanize v2 + LLM reports | ⬜ |
-| 11 | Final GitHub push of complete state | ✅ 2026-10-07 |
-| 12 | Pre-submission overlap re-check (final: PASS 2026-10-07, 4 new must-cites) | ✅ |
+# Run persistent NVMe storage & concurrency benchmarks
+python3 benchmarks/run_storage_scaling.py
 
-Verdict: evidence base complete; nothing submittable until items 7–8 land. See `RUNLOG.md` for the append-only experiment history.
+# Run real OS SIGKILL multi-model campaign on Apple Silicon (MPS) or CUDA
+python3 benchmarks/run_multimodel_sigkill.py --episodes 20
+```
+
+## License
+
+Apache License 2.0. See [LICENSE](LICENSE).

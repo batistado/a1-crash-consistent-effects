@@ -1,0 +1,154 @@
+{
+  "storage_medium": "Apple M5 Pro NVMe APFS (persistent workspace directory)",
+  "step_latency_breakdown": {
+    "jsonl_fsync": {
+      "steps": 400,
+      "claim_ms": {
+        "p50": 0.135,
+        "p99": 0.42
+      },
+      "commit_ms": {
+        "p50": 0.133,
+        "p99": 0.471
+      },
+      "ckpt_ms": {
+        "p50": 0.233,
+        "p99": 0.785
+      },
+      "step_total_ms": {
+        "mean": 0.558,
+        "p50": 0.505,
+        "p99": 1.401
+      }
+    },
+    "jsonl_fullfsync": {
+      "steps": 120,
+      "claim_ms": {
+        "p50": 3.73,
+        "p99": 9.509
+      },
+      "commit_ms": {
+        "p50": 4.12,
+        "p99": 7.157
+      },
+      "ckpt_ms": {
+        "p50": 0.38,
+        "p99": 0.885
+      },
+      "step_total_ms": {
+        "mean": 9.872,
+        "p50": 8.88,
+        "p99": 17.391
+      }
+    },
+    "sqlite_wal": {
+      "steps": 400,
+      "claim_ms": {
+        "p50": 0.082,
+        "p99": 1.623
+      },
+      "commit_ms": {
+        "p50": 0.042,
+        "p99": 0.093
+      },
+      "ckpt_ms": {
+        "p50": 0.244,
+        "p99": 0.385
+      },
+      "step_total_ms": {
+        "mean": 0.435,
+        "p50": 0.374,
+        "p99": 2.131
+      }
+    }
+  },
+  "lookup_scaling": [
+    {
+      "n_claims": 100,
+      "total_log_records": 200,
+      "legacy_unindexed_find_p50_ms": 0.2534,
+      "claimfence_indexed_find_p50_ms": 0.00221,
+      "claimfence_sqlite_find_p50_ms": 0.0041,
+      "claimfence_cold_index_build_ms": 0.48,
+      "lookup_speedup_vs_legacy": 114.7
+    },
+    {
+      "n_claims": 500,
+      "total_log_records": 1000,
+      "legacy_unindexed_find_p50_ms": 1.2112,
+      "claimfence_indexed_find_p50_ms": 0.00246,
+      "claimfence_sqlite_find_p50_ms": 0.005,
+      "claimfence_cold_index_build_ms": 2.04,
+      "lookup_speedup_vs_legacy": 492.7
+    },
+    {
+      "n_claims": 1000,
+      "total_log_records": 2000,
+      "legacy_unindexed_find_p50_ms": 2.361,
+      "claimfence_indexed_find_p50_ms": 0.00225,
+      "claimfence_sqlite_find_p50_ms": 0.004,
+      "claimfence_cold_index_build_ms": 3.89,
+      "lookup_speedup_vs_legacy": 1049.3
+    },
+    {
+      "n_claims": 5000,
+      "total_log_records": 10000,
+      "legacy_unindexed_find_p50_ms": 13.336,
+      "claimfence_indexed_find_p50_ms": 0.00221,
+      "claimfence_sqlite_find_p50_ms": 0.0042,
+      "claimfence_cold_index_build_ms": 22.25,
+      "lookup_speedup_vs_legacy": 6037.1
+    },
+    {
+      "n_claims": 10000,
+      "total_log_records": 20000,
+      "legacy_unindexed_find_p50_ms": 28.1431,
+      "claimfence_indexed_find_p50_ms": 0.00217,
+      "claimfence_sqlite_find_p50_ms": 0.0042,
+      "claimfence_cold_index_build_ms": 44.97,
+      "lookup_speedup_vs_legacy": 12987.1
+    }
+  ],
+  "http_concurrency": [
+    {
+      "concurrency_k": 1,
+      "total_ops": 40,
+      "throughput_ops_s": 2426.3,
+      "lat_p50_ms": 0.35,
+      "lat_p95_ms": 0.54,
+      "lat_p99_ms": 0.62
+    },
+    {
+      "concurrency_k": 4,
+      "total_ops": 160,
+      "throughput_ops_s": 3423.0,
+      "lat_p50_ms": 1.06,
+      "lat_p95_ms": 1.47,
+      "lat_p99_ms": 1.65
+    },
+    {
+      "concurrency_k": 8,
+      "total_ops": 320,
+      "throughput_ops_s": 1732.2,
+      "lat_p50_ms": 1.66,
+      "lat_p95_ms": 3.51,
+      "lat_p99_ms": 6.69
+    },
+    {
+      "concurrency_k": 16,
+      "total_ops": 640,
+      "throughput_ops_s": 2658.9,
+      "lat_p50_ms": 1.91,
+      "lat_p95_ms": 7.29,
+      "lat_p99_ms": 36.08
+    },
+    {
+      "concurrency_k": 32,
+      "total_ops": 1280,
+      "throughput_ops_s": 2654.0,
+      "lat_p50_ms": 3.28,
+      "lat_p95_ms": 13.86,
+      "lat_p99_ms": 126.86
+    }
+  ]
+}
