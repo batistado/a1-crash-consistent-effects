@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static LaTeX, BibTeX, Highlights, Figure, and Humanizer Validator for Elsevier FGCS."""
+"""Static LaTeX, BibTeX, Highlights, Figure, and Humanizer Validator for Elsevier IST."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ def check_highlights() -> list[str]:
     txt = HIGHLIGHTS_TEX.read_text(encoding="utf-8")
     items = [m.group(1).strip() for m in re.finditer(r"\\item\s+(.+)", txt)]
     if not (3 <= len(items) <= 5):
-        errs.append(f"Elsevier FGCS requires 3-5 highlights, found {len(items)}")
+        errs.append(f"Elsevier IST requires 3-5 highlights, found {len(items)}")
     for idx, it in enumerate(items, 1):
         # Strip simple LaTeX math delimiters if any when checking character count,
         # AND enforce raw string <= 85 chars as conservative upper bound!
@@ -71,7 +71,7 @@ def validate() -> int:
         "Declaration of generative AI",
     ]:
         if req_sec.lower() not in clean_tex.lower():
-            errors.append(f"Missing mandatory Elsevier FGCS section: {req_sec!r}")
+            errors.append(f"Missing mandatory Elsevier IST section: {req_sec!r}")
 
     # 3. Citations vs BibTeX keys
     bib_keys = set(re.findall(r"@\w+\{\s*([^,\s]+)\s*,", bib))
@@ -115,7 +115,7 @@ def validate() -> int:
     print(
         f"VALIDATION PASSED: {len(cited_keys)} unique citations verified, "
         f"{len(labels)} labels resolved, {len(figs)} figures verified, "
-        f"Elsevier FGCS highlights & declarations compliant, 0 banned tells."
+        f"Elsevier IST highlights & declarations compliant, 0 banned tells."
     )
     return 0
 
