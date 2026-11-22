@@ -60,14 +60,20 @@ Krishna~Suman~Dara\IEEEauthorrefmark{3}}%
 \IEEEcompsocthanksitem \IEEEauthorrefmark{2}A.~Rentala and S.~Rahul are IEEE Independent Researchers, Fremont, CA, USA (e-mail: anudeep.rentala@ieee.org; someshrahul@ieee.org).
 \IEEEcompsocthanksitem \IEEEauthorrefmark{3}R.~M.~Pai and K.~S.~Dara are IEEE Independent Researchers, Sunnyvale, CA, USA (e-mail: raghuram.pai@ieee.org; Krishna-suman.dara@ieee.org).}}
 
-\markboth{SUBMITTED TO INFORMATION AND SOFTWARE TECHNOLOGY}%
+\markboth{SUBMITTED TO IEEE TRANSACTIONS ON SERVICES COMPUTING}%
 {SYED ET AL.: CLAIMFENCE: CRASH-CONSISTENT DISTRIBUTED AGENT WORKFLOWS}
 
 \IEEEtitleabstractindextext{%
 \begin{abstract}
-Cloud and enterprise workflows increasingly embed Large Language Model (LLM) agents that invoke external payment gateways, ticketing APIs, and mutable data stores across multi-stage Directed Acyclic Graphs (DAGs). Existing agent orchestration runtimes checkpoint conversation trajectories at graph-superstep boundaries without recording external effect commitments ahead of invocation. When a worker process crashes inside the harness crash window $W(s) = (t_{\mathrm{commit}}(s), t_{\mathrm{ckpt}}(s))$, after an external service commits a side effect and before the checkpoint advances, the restarted workflow re-executes the unrecorded step and duplicates external mutations while losing the volatile return payload required by downstream DAG stages. Standard client-derived idempotency keys fail across crashes because recovered LLM planners paraphrase free-form arguments, insert diagnostic steps that shift positional indices, and cannot prevent overlapping stale generations or concurrent recovery races.
+\textbf{Context:} Cloud and enterprise workflows increasingly embed Large Language Model (LLM) agents that invoke external payment gateways, ticketing APIs, and mutable data stores across multi-stage Directed Acyclic Graphs (DAGs). Existing agent orchestration runtimes checkpoint conversation trajectories at graph-superstep boundaries without recording external effect commitments ahead of invocation. When a worker crashes inside the harness crash window $W(s) = (t_{\mathrm{commit}}(s), t_{\mathrm{ckpt}}(s))$, restarted workflows duplicate external mutations and lose volatile return payloads required by downstream steps.
 
-We present \CF{}, a crash-consistency middleware for cooperative or outbox-proxied services combining three mechanisms: (1)~a concurrency-safe write-ahead effect-claim store (implemented as single-host POSIX \texttt{flock}-serialized $O(1)$ hash-indexed \texttt{JSONL} and transactional \texttt{SQLite-WAL} engines, plus a disaggregated multi-node \texttt{HTTPClaimStore} service) that binds each schema-extracted \texttt{(action, target, occurrence)} identity to a durable key prior to service invocation and fences checkpoint advancement behind logged commits; (2)~server- or sidecar-enforced atomic monotonic compare-and-increment (\texttt{CAS\_inc}) epoch-lease fencing that rejects delayed zombie writers and serializes concurrent dual-recovery instances; and (3)~payload-preserving reconciliation-first recovery that replays uncommitted claims with their original keys prior to LLM invocation and restores committed return tokens to downstream dependent steps. Exhaustive finite-state model checking over a two-step chained protocol verifies zero safety, completion, or payload-continuity violations across all \MCCFStates{} reachable states (\MCCFEdges{} transitions), while surfacing minimal counterexamples for trajectory checkpointing, mutable keys, checkpoint-time ledgers, and client-incremented fences. Across $33{,}000$ multi-crash chaos workflows, real OS \texttt{SIGKILL} campaigns spanning four models across two vendors (\texttt{Qwen2.5-3B}, \texttt{Qwen2.5-7B}, \texttt{gpt-4o-mini}, and \texttt{gpt-4.1-mini}), parallel \texttt{LangGraph} \texttt{Send} deployments, and unmodified idempotent/legacy upstream proxy evaluations, \CF{} commits zero duplicate effects and achieves \ChaosCFStrict{} strict end-to-end correctness across $k \in \{1..4\}$ crashes per workflow (where baselines decay to \SweepKFourBase{}--\SweepKFourCanon{} at $k=4$), accelerates $10^4$-claim lookups by \ScaleTenKSpeedup{} (\ScaleTenKCFUs{} vs.\ \ScaleTenKLegacyMs{}), and sustains \HttpPeakOps{}~ops/s at \LatSQLiteStepPFifty{}--\LatFsyncStepPFifty{} local (\LatNetStepPFifty{} multi-node TCP; \LatFullFsyncStepPFifty{} physical \texttt{F\_FULLFSYNC}) per-step latency.
+\textbf{Objectives:} We aim to eliminate duplicate side effects and preserve downstream dataflow continuity across multi-crash distributed agent workflows despite post-crash LLM argument paraphrasing, step-index shifts, delayed zombie writers, and concurrent recovery races.
+
+\textbf{Methods:} We present \CF{}, a crash-consistency middleware combining: (1)~a concurrency-safe write-ahead effect-claim store (POSIX \texttt{flock}-serialized $O(1)$ hash-indexed \texttt{JSONL}, \texttt{SQLite-WAL}, and disaggregated \texttt{HTTPClaimStore} backends) binding each schema-extracted \texttt{(action, target, occurrence)} identity to a durable key prior to invocation and fencing checkpoints behind logged commits; (2)~server- or sidecar-enforced atomic compare-and-increment (\texttt{CAS\_inc}) epoch-lease fencing; and (3)~payload-preserving reconciliation-first recovery. We verify safety and liveness via formal proofs, exhaustive finite-state model checking, $33{,}000$ chaos workflows, real OS \texttt{SIGKILL} campaigns across four LLMs (\texttt{Qwen2.5-3B}, \texttt{Qwen2.5-7B}, \texttt{gpt-4o-mini}, \texttt{gpt-4.1-mini}), parallel \texttt{LangGraph} \texttt{Send} deployments, and NVMe/proxy microbenchmarks.
+
+\textbf{Results:} Model checking verifies zero invariant violations across all \MCCFStates{} reachable states (\MCCFEdges{} transitions). \CF{} commits zero duplicate effects and achieves \ChaosCFStrict{} strict end-to-end correctness across $k \in \{1..4\}$ crashes (where baselines decay to \SweepKFourBase{}--\SweepKFourCanon{} at $k=4$), accelerates $10^4$-claim lookups by \ScaleTenKSpeedup{} (\ScaleTenKCFUs{} vs.\ \ScaleTenKLegacyMs{}), and sustains \HttpPeakOps{}~ops/s at \LatSQLiteStepPFifty{}--\LatFsyncStepPFifty{} local (\LatNetStepPFifty{} multi-node TCP) latency.
+
+\textbf{Conclusion:} Pre-invocation identity-to-key claim logging, atomic epoch-lease fencing, and reconciliation-first recovery decouple external effect safety and dataflow continuity from post-crash LLM non-determinism with sub-millisecond overhead.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -438,21 +444,21 @@ To validate integration with a production multi-actor graph runtime, we ported \
 \centering
 \caption{Controlled \texttt{LangGraph} v2 boundary evaluations (E1--E5; exact two-sided $95\%$ CI for $0/60$ is $[0.0\%, 6.0\%]$ and for $60/60$ is $[94.0\%, 100\%]$).}
 \label{tab:boundary}
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.12}
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{@{}lllcrc@{}}
+\begin{tabular}{@{}lp{1.75cm}p{2.3cm}crc@{}}
 \toprule
-\textbf{ID} & \textbf{Condition} & \textbf{Boundary Perturbation} & \textbf{Eps} & \textbf{Dup.\ Eps} & \textbf{Completion} \\
+\textbf{ID} & \textbf{Condition} & \textbf{Perturbation} & \textbf{Eps} & \textbf{Dup.} & \textbf{Comp.} \\
 \midrule
-E1 & Native \texttt{SqliteSaver} + $K_{\mathrm{pos}}$ & Stable superstep branch IDs & 60 & 0 & 60/60 \\
-E2a & $K_{\mathrm{pos}}$ vs.\ \CF{} & Branch rotation ($b_0\!\to\!b_2\!\to\!b_1$) & 60/60 & 46 vs.\ \textbf{0} & 14/60 vs.\ \textbf{60/60} \\
-E2b & $K_{\mathrm{hash}}$ vs.\ \CF{} & Surface target drift (\texttt{\_rpl}) & 60/60 & 46 vs.\ \textbf{0} & 14/60 vs.\ \textbf{60/60} \\
-E3a & \CF{} fan-out $\{2,4,8\}$ & Parallel \texttt{Send} width scaling & 90 & \textbf{0} & \textbf{90/90} \\
-E4 & WAL w/o Epoch Fence & Unreconciled stale retry ($p=0.5$) & 200 & 102 & 98/200 \\
-E5 & Paired \CF{} / $K_{\mathrm{pos}}$ / Native & Seed-matched recovery timing & 60 & \textbf{0} & \textbf{60/60} \\
+E1 & Native + $K_{\mathrm{pos}}$ & Stable branch IDs & 60 & 0 & 60/60 \\
+E2a & $K_{\mathrm{pos}}$ vs.\ \CF{} & Branch rotation & 60/60 & 46/\textbf{0} & 14/\textbf{60} \\
+E2b & $K_{\mathrm{hash}}$ vs.\ \CF{} & Target drift (\texttt{\_rpl}) & 60/60 & 46/\textbf{0} & 14/\textbf{60} \\
+E3a & \CF{} $\{2,4,8\}$ & \texttt{Send} width scaling & 90 & \textbf{0} & \textbf{90/90} \\
+E4 & WAL w/o Fence & Unreconciled retry & 200 & 102 & 98/200 \\
+E5 & Paired timing & Seed-matched run & 60 & \textbf{0} & \textbf{60/60} \\
 \bottomrule
-\end{tabular}%
-}
+\end{tabular}
 \end{table}
 
 \begin{figure}[!t]
@@ -510,22 +516,22 @@ Finally, Table~\ref{tab:proxy_a4} (\texttt{benchmarks/\allowbreak run\_multinode
 \centering
 \caption{Empirical evaluation of \texttt{TransactionalOutboxProxy} over unmodified upstreams ($300$ eps/mode) and Assumption~(A4) extractor boundaries ($500$ eps/regime).}
 \label{tab:proxy_a4}
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.12}
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{@{}llccc@{}}
+\begin{tabular}{@{}lp{3.45cm}ccc@{}}
 \toprule
-\textbf{Boundary Suite} & \textbf{Upstream / Planner Regime} & \textbf{Eps} & \textbf{Dup.\ Rate} & \textbf{Strict E2E} \\
+\textbf{Suite} & \textbf{Upstream / Planner Regime} & \textbf{Eps} & \textbf{Dup.} & \textbf{Strict E2E} \\
 \midrule
-Outbox Proxy (P1) & \texttt{Idempotency-Key} upstream + $20\%$ $W_{\mathrm{proxy}}$ crash & 300 & \textbf{0.0000} & \textbf{1.0000} \\
-Outbox Proxy (P2) & Non-idempotent legacy upstream (worker faults) & 300 & \textbf{0.0000} & \textbf{1.0000} \\
-Outbox Proxy (P3) & Non-idempotent legacy + $20\%$ $W_{\mathrm{proxy}}$ crash & 300 & \ProxyLegacyCrashDup{} & 0.7800 \\
+Proxy P1 & \texttt{Idempotency-Key} + $20\%$ $W_{\mathrm{proxy}}$ crash & 300 & \textbf{0.0000} & \textbf{1.0000} \\
+Proxy P2 & Non-idemp.\ legacy (worker faults) & 300 & \textbf{0.0000} & \textbf{1.0000} \\
+Proxy P3 & Non-idemp.\ legacy + $20\%$ $W_{\mathrm{proxy}}$ crash & 300 & \ProxyLegacyCrashDup{} & 0.7800 \\
 \midrule
-Extractor (A4-1) & Target drift + re-emits + $25\%$ authorized \texttt{occ=1} & 500 & \textbf{0.0000} & \textbf{1.0000} \\
-Extractor (A4-2) & $30\%$ false \texttt{occ=0$\to$1} retry (unguarded A4 viol.) & 500 & \AFourUnguardedDup{} & 0.7580 \\
-Extractor (A4-3) & $30\%$ false \texttt{occ=0$\to$1} + \texttt{max\_occ} guardrail & 500 & \textbf{0.0000} & \textbf{1.0000} \\
+A4-1 & Drift + re-emits + $25\%$ auth.\ \texttt{occ=1} & 500 & \textbf{0.0000} & \textbf{1.0000} \\
+A4-2 & $30\%$ false \texttt{occ=0$\to$1} (unguarded) & 500 & \AFourUnguardedDup{} & 0.7580 \\
+A4-3 & $30\%$ false \texttt{occ=0$\to$1} + \texttt{max\_occ} guard & 500 & \textbf{0.0000} & \textbf{1.0000} \\
 \bottomrule
-\end{tabular}%
-}
+\end{tabular}
 \end{table}
 
 % ============================================================================
@@ -547,18 +553,8 @@ Checkpointing agent trajectories without pre-invocation effect logging leaves st
 \section*{Code and Data Availability}
 The \CF{} Python package, exhaustive model checker, multi-model \texttt{SIGKILL} benchmark suite, \texttt{LangGraph} runtime port, and raw experimental telemetry are publicly available at \url{https://github.com/batistado/a1-crash-consistent-effects} and \url{https://huggingface.co/datasets/batistado/a1-crash-recovery-results}.
 
-\section*{CRediT Authorship Contribution Statement}
-\textbf{Mohammed Kamran Syed:} Conceptualization, Methodology, Formal analysis, Software, Investigation, Validation, Data curation, Writing -- original draft, Writing -- review \& editing.
-\textbf{Anudeep Rentala:} Methodology, Software, Validation, Investigation, Writing -- review \& editing.
-\textbf{Somesh Rahul:} Investigation, Validation, Resources, Data curation, Writing -- review \& editing.
-\textbf{Raghuram Malpe Pai:} Formal analysis, Validation, Visualization, Writing -- review \& editing.
-\textbf{Krishna Suman Dara:} Validation, Investigation, Writing -- review \& editing.
-
-\section*{Declaration of Competing Interest}
-The authors declare that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.
-
-\section*{Declaration of Generative AI and AI-Assisted Technologies in the Writing Process}
-During the preparation of this work, the authors used AI-assisted tools to support manuscript drafting, editing, and typesetting verification under their direct supervision. All research hypotheses, protocol designs, formal proofs, software implementations, experiments, and scientific conclusions were conceived, verified, and approved by the authors, who take full responsibility for the content of the publication.
+\section*{Acknowledgment}
+During the preparation of this work, the authors used AI-assisted tools to support manuscript editing and typesetting verification under their direct supervision. All research hypotheses, protocol designs, formal proofs, software implementations, experiments, and scientific conclusions were conceived, verified, and approved by the authors, who take full responsibility for the content of the publication. The authors declare no competing financial interests.
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}

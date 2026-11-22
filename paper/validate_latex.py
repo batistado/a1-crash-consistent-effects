@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static LaTeX, BibTeX, Highlights, Figure, and Humanizer Validator for Elsevier IST."""
+"""Static LaTeX, BibTeX, Figure, Privacy, and Humanizer Validator for IEEE TSC."""
 
 from __future__ import annotations
 
@@ -10,7 +10,6 @@ from pathlib import Path
 PAPER_DIR = Path(__file__).resolve().parent
 MAIN_TEX = PAPER_DIR / "main.tex"
 BIB_FILE = PAPER_DIR / "references.bib"
-HIGHLIGHTS_TEX = PAPER_DIR / "highlights.tex"
 
 BANNED_SUBSTRINGS = [
     "reviewer-requested",
@@ -26,25 +25,8 @@ BANNED_SUBSTRINGS = [
 ]
 
 
-def check_highlights() -> list[str]:
-    errs = []
-    if not HIGHLIGHTS_TEX.exists():
-        return ["Missing highlights.tex"]
-    txt = HIGHLIGHTS_TEX.read_text(encoding="utf-8")
-    items = [m.group(1).strip() for m in re.finditer(r"\\item\s+(.+)", txt)]
-    if not (3 <= len(items) <= 5):
-        errs.append(f"Elsevier IST requires 3-5 highlights, found {len(items)}")
-    for idx, it in enumerate(items, 1):
-        # Strip simple LaTeX math delimiters if any when checking character count,
-        # AND enforce raw string <= 85 chars as conservative upper bound!
-        if len(it) > 85:
-            errs.append(f"Highlight {idx} exceeds 85 chars ({len(it)}): {it!r}")
-    return errs
-
-
 def validate() -> int:
     errors: list[str] = []
-    errors.extend(check_highlights())
 
     if not MAIN_TEX.exists():
         print("ERROR: main.tex not found")
@@ -58,20 +40,18 @@ def validate() -> int:
         line_nc = re.sub(r"(?<!\\)%.*$", "", line)
         clean_lines.append(line_nc)
     clean_tex = "\n".join(clean_lines)
+    clean_lower = clean_tex.lower()
 
-    # 1. Check banned substrings / AI tells / leftover meta-notes
+    # 1. Check banned substrings / AI tells / employer leaks
     for bad in BANNED_SUBSTRINGS:
-        if bad in clean_tex:
-            errors.append(f"Banned substring / AI tell found in main.tex: {bad!r}")
+        if bad in clean_lower:
+            errors.append(f"Banned substring / employer / AI tell found in main.tex: {bad!r}")
 
-    # 2. Check Elsevier mandatory declarations
-    for req_sec in [
-        "CRediT authorship contribution statement",
-        "Declaration of competing interest",
-        "Declaration of generative AI",
-    ]:
-        if req_sec.lower() not in clean_tex.lower():
-            errors.append(f"Missing mandatory Elsevier IST section: {req_sec!r}")
+    # 2. Verify IEEE TSC header & Code/Data Availability
+    if "SUBMITTED TO IEEE TRANSACTIONS ON SERVICES COMPUTING" not in clean_tex:
+        errors.append("Missing IEEE TSC running header in main.tex")
+    if "Code and Data Availability" not in clean_tex:
+        errors.append("Missing Code and Data Availability section in main.tex")
 
     # 3. Citations vs BibTeX keys
     bib_keys = set(re.findall(r"@\w+\{\s*([^,\s]+)\s*,", bib))
@@ -84,7 +64,7 @@ def validate() -> int:
     if missing_bib:
         errors.append(f"Missing BibTeX entries for cited keys: {missing_bib}")
     if len(cited_keys) < 35:
-        errors.append(f"Too few unique citations for Q1 archival paper: {len(cited_keys)} (< 35)")
+        errors.append(f"Too few unique citations for IEEE Transactions: {len(cited_keys)} (< 35)")
 
     # 4. Labels vs refs
     labels = set(re.findall(r"\\label\{([^}]+)\}", clean_tex))
@@ -115,7 +95,7 @@ def validate() -> int:
     print(
         f"VALIDATION PASSED: {len(cited_keys)} unique citations verified, "
         f"{len(labels)} labels resolved, {len(figs)} figures verified, "
-        f"Elsevier IST highlights & declarations compliant, 0 banned tells."
+        f"IEEE TSC compliant, 0 employer leaks, 0 banned tells."
     )
     return 0
 
