@@ -1,17 +1,12 @@
-\documentclass[10pt,journal,compsoc]{IEEEtran}
+\documentclass[10pt,journal]{IEEEtran}
 
-\ifCLASSOPTIONcompsoc
-  \usepackage[nocompress]{cite}
-\else
-  \usepackage{cite}
-\fi
+\usepackage{cite}
 
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath,amssymb,amsfonts,amsthm}
 \usepackage{graphicx}
 \usepackage{booktabs}
-\usepackage{multirow}
 \usepackage{array}
 \usepackage{enumitem}
 \usepackage{xcolor}
@@ -43,6 +38,11 @@
 \renewcommand{\topfraction}{0.94}
 \renewcommand{\bottomfraction}{0.94}
 \setcounter{totalnumber}{6}
+\setlength{\textfloatsep}{7pt plus 2pt minus 2pt}
+\setlength{\floatsep}{6pt plus 2pt minus 2pt}
+\setlength{\dbltextfloatsep}{8pt plus 2pt minus 2pt}
+\setlength{\abovecaptionskip}{3.5pt}
+\setlist{nosep,topsep=1.5pt}
 
 \hyphenation{Claim-Fence Lang-Graph check-point-ing idempo-tent work-flows linear-iz-abil-ity}
 
@@ -50,20 +50,20 @@
 
 \title{\CF{}: Write-Ahead Effect-Claim Logging, Atomic Epoch-Lease Fencing, and Payload-Preserving Reconciliation for Crash-Consistent Distributed Agent Workflows}
 
-\author{\IEEEauthorblockN{Mohammed~Kamran~Syed\IEEEauthorrefmark{1},
+\author{Mohammed~Kamran~Syed\IEEEauthorrefmark{1},
 Anudeep~Rentala\IEEEauthorrefmark{2},
 Somesh~Rahul\IEEEauthorrefmark{2},
 Raghuram~Malpe~Pai\IEEEauthorrefmark{3}, and
-Krishna~Suman~Dara\IEEEauthorrefmark{3}}%
-\IEEEcompsocitemizethanks{%
-\IEEEcompsocthanksitem \IEEEauthorrefmark{1}M.~K.~Syed (Corresponding Author) is an IEEE Independent Researcher, Mountain House, CA, USA (e-mail: mohammedkamran.syed@ieee.org; ORCID: 0009-0009-9058-5375).
-\IEEEcompsocthanksitem \IEEEauthorrefmark{2}A.~Rentala and S.~Rahul are IEEE Independent Researchers, Fremont, CA, USA (e-mail: anudeep.rentala@ieee.org; someshrahul@ieee.org).
-\IEEEcompsocthanksitem \IEEEauthorrefmark{3}R.~M.~Pai and K.~S.~Dara are IEEE Independent Researchers, Sunnyvale, CA, USA (e-mail: raghuram.pai@ieee.org; Krishna-suman.dara@ieee.org).}}
+Krishna~Suman~Dara\IEEEauthorrefmark{3}%
+\thanks{\IEEEauthorrefmark{1}M.~K.~Syed (Corresponding Author) is an IEEE Independent Researcher, Mountain House, CA, USA (e-mail: mohammedkamran.syed@ieee.org; ORCID: 0009-0009-9058-5375).}%
+\thanks{\IEEEauthorrefmark{2}A.~Rentala and S.~Rahul are IEEE Independent Researchers, Fremont, CA, USA (e-mail: anudeep.rentala@ieee.org; someshrahul@ieee.org).}%
+\thanks{\IEEEauthorrefmark{3}R.~M.~Pai and K.~S.~Dara are IEEE Independent Researchers, Sunnyvale, CA, USA (e-mail: raghuram.pai@ieee.org; Krishna-suman.dara@ieee.org).}}
 
 \markboth{SUBMITTED TO IEEE TRANSACTIONS ON SERVICES COMPUTING}%
 {SYED ET AL.: CLAIMFENCE: CRASH-CONSISTENT DISTRIBUTED AGENT WORKFLOWS}
 
-\IEEEtitleabstractindextext{%
+\maketitle
+
 \begin{abstract}
 \textbf{Context:} Cloud and enterprise workflows increasingly embed Large Language Model (LLM) agents that invoke external payment gateways, ticketing APIs, and mutable data stores across multi-stage Directed Acyclic Graphs (DAGs). Existing agent orchestration runtimes checkpoint conversation trajectories at graph-superstep boundaries without recording external effect commitments ahead of invocation. When a worker crashes inside the harness crash window $W(s) = (t_{\mathrm{commit}}(s), t_{\mathrm{ckpt}}(s))$, restarted workflows duplicate external mutations and lose volatile return payloads required by downstream steps.
 
@@ -78,33 +78,29 @@ Krishna~Suman~Dara\IEEEauthorrefmark{3}}%
 
 \begin{IEEEkeywords}
 Crash consistency, durable workflow execution, write-ahead logging, exactly-once semantics, epoch-lease fencing, distributed cloud orchestration, fault tolerance, stateful LLM agents.
-\end{IEEEkeywords}}
-
-\maketitle
-\IEEEdisplaynontitleabstractindextext
-\IEEEpeerreviewmaketitle
+\end{IEEEkeywords}
 
 % ============================================================================
-\IEEEraisesectionheading{\section{Introduction}\label{sec:intro}}
+\section{Introduction}\label{sec:intro}
 % ============================================================================
 
 \IEEEPARstart{W}{orkflow} management systems have long served as the reliability backbone for multi-stage scientific and cloud computing pipelines, coordinating task execution, checkpointing, and failure recovery across distributed resources~\cite{juve2013characterizing,deelman2015pegasus,ferreiradasilva2017characterizing,chen2015faulttolerant,buyya2018manifesto}. Over the past three years, cloud service orchestration has expanded from deterministic directed acyclic graphs (DAGs) to autonomous agentic workflows in which Large Language Models (LLMs) dynamically plan, invoke external REST/RPC microservices, inspect results, and route downstream stages~\cite{yao2023react,schick2023toolformer,patil2024gorilla,yao2025taubench}. Frameworks such as \texttt{LangGraph}~\cite{langgraph2026}, \texttt{CrewAI}, \texttt{AutoGen}, and cloud agent SDKs persist intermediate graph state so long-running workflows can resume after container preemption, out-of-memory (\texttt{OOM}) termination, or node failure~\cite{cemri2025mast,khan2026resume}.
 
 Despite widespread production deployment in customer operations, incident remediation, and cloud resource provisioning, current agent orchestration runtimes checkpoint \emph{conversation trajectories} rather than \emph{external effect commitments}. Consider an automated billing workflow where Step~0 issues a \$212.00 refund through an external payment service and returns a receipt token \texttt{rcpt\_iss\_9a4f}, which Step~1 must record in an audit ledger. If the worker container is \texttt{OOM}-killed after the payment service commits the refund ($t_{\mathrm{commit}}$) but before the orchestrator writes its superstep checkpoint ($t_{\mathrm{ckpt}}$), two distinct failures occur upon recovery:
-\begin{enumerate}[leftmargin=1.5em]
+\begin{enumerate}
   \item \emph{Duplicate external mutation:} Resuming from the last durable checkpoint (prior to Step~0), the recovered agent observes no record of the refund and invokes the payment tool a second time, refunding the customer twice~\cite{khan2026resume,safetoresume2026}.
   \item \emph{Dataflow payload severance:} Even if the payment service suppresses the duplicate mutation by matching an idempotency key and returning a bare \texttt{DUPLICATE\_SUPPRESSED} status, the original return token \texttt{rcpt\_iss\_9a4f} resided only in the dead process's volatile memory, leaving Step~1 unable to record a valid audit reference.
 \end{enumerate}
 
 Classical database recovery and stateful serverless engines close post-commit crash windows through write-ahead logging (WAL) and linearizable RPC completion records~\cite{mohan1992aries,lee2015rifl,zhang2020beldi,jia2021boki}. However, distributed LLM workflows violate two load-bearing assumptions of deterministic replay engines~\cite{sreekanti2020aft,temporal2024}:
-\begin{itemize}[leftmargin=1.4em]
+\begin{itemize}
   \item \emph{Post-crash identity re-synthesis:} In a database or deterministic workflow engine, a recovering worker replays recorded operation identifiers verbatim. In an agentic workflow, a restarted LLM planner re-synthesizes its execution plan from durable context: it frequently paraphrases free-form tool arguments (breaking content-hash idempotency keys) or inserts read-only diagnostic checks before retrying (shifting step indices and breaking positional keys).
   \item \emph{Overlapping stale workers and concurrent recoveries:} Container orchestrators (e.g., Kubernetes or serverless watchdogs) routinely trigger recovery upon heartbeat timeouts while a partitioned pre-crash worker is still paused mid-fan-out, or accidentally launch two concurrent recovery workers~\cite{burrows2006chubby,kleppmann2017ddia}. Without atomic server-enforced fencing, a delayed zombie worker or racing recovery instance can mint a fresh key and commit phantom side effects after reconciliation completes.
 \end{itemize}
 
 \begin{figure*}[!t]
   \centering
-  \includegraphics[width=0.98\textwidth]{fig1_architecture.pdf}
+  \includegraphics[width=0.93\textwidth]{fig1_architecture.pdf}
   \caption{Fault taxonomy and \CF{} architecture. (a)~The harness crash window $W(s) = (t_{\mathrm{commit}}, t_{\mathrm{ckpt}})$ begins after the external service commits and persists until the durable checkpoint advances; post-call checkpoint-time ledgers remain unwritten throughout $W(s)$. (b)~\CF{} logs a serialized \texttt{CLAIM} in $L$ prior to tool invocation, enforces atomic monotonic \texttt{CAS\_inc} epoch-lease fencing at $T$, caches return payloads in \texttt{COMMIT} records, and reconciles uncommitted claims from $L$ before resuming the LLM planner.}
   \label{fig:arch}
 \end{figure*}
@@ -112,7 +108,7 @@ Classical database recovery and stateful serverless engines close post-commit cr
 Recent studies examine adjacent slices of this reliability gap without resolving the full distributed crash window. Li~\cite{limbo2026} evaluates client idempotency keys under network timeouts at the service boundary ($t_{\mathrm{call}}$ to $t_{\mathrm{commit}}$), leaving worker crashes untested. Khan~\cite{khan2026resume} formalizes workflow resume contracts and introduces \textsc{Remit}, an effect ledger written transactionally \emph{with} the completion checkpoint; because the ledger entry is written at $t_{\mathrm{ckpt}}$ rather than prior to $t_{\mathrm{call}}$, an external side effect that commits before a crash inside $W(s)$ remains unrecorded at the harness. Other recent systems target adversarial rollback attacks~\cite{acrfence2026,safetoresume2026}, pre-execution voting buses~\cite{logact2026}, or local sandbox undo~\cite{agentrewind2026}.
 
 We present \CF{} (Fig.~\ref{fig:arch}), a crash-consistent execution middleware for cooperative or sidecar-proxied tool services that decouples external side-effect safety and dataflow continuity from post-crash LLM non-determinism. This paper makes four contributions:
-\begin{enumerate}[leftmargin=1.5em]
+\begin{enumerate}
   \item \emph{Crash-window formalism and multi-crash survival analysis (\S\ref{sec:model}, \S\ref{sec:theory}):} We formalize the harness crash window $W(s) = (t_{\mathrm{commit}}(s), t_{\mathrm{ckpt}}(s))$ across chained multi-step DAGs and prove (Theorem~\ref{thm:fragility}) that retry-time key derivations over mutable planner inputs suffer both duplicate execution and collision-induced omission, causing strict end-to-end workflow correctness to decay exponentially as $(1 - p_{\mathrm{fail}})^k$ across $k$ crashes. We also characterize why post-invocation checkpoint-time ledgers remain vulnerable inside $W(s)$.
   \item \emph{Local and multi-node claim stores, schema identity extraction, and outbox-fenced payload replay (\S\ref{sec:design}):} \CF{} enforces pre-invocation \texttt{create\_or\_reuse} over schema-canonicalized \texttt{(action, target, occurrence)} triples across single-host (\texttt{flock}-serialized $O(1)$ \texttt{JSONL} and \texttt{SQLite-WAL}) and disaggregated multi-node (\texttt{HTTPClaimStore}) backends. At the service boundary, atomic compare-and-increment (\texttt{CAS\_inc}) epoch-lease fencing and RIFL-style~\cite{lee2015rifl} payload caching are enforced either natively by cooperative receivers or via an implemented \texttt{TransactionalOutboxProxy} fronting unmodified commercial (\texttt{Idempotency-Key}) and legacy REST APIs.
   \item \emph{Linearizable safety proofs and exhaustive finite-state model checking (\S\ref{sec:theory}):} We prove linearizable at-most-once commitment (Theorem~\ref{thm:safety}) and payload-preserving claim liveness (Theorem~\ref{thm:liveness}) under overlapping zombies and racing recoveries. An exhaustive breadth-first model checker over a two-step chained protocol verifies zero invariant violations across all \MCCFStates{} reachable states (\MCCFEdges{} transitions), while extracting minimal counterexample traces for four weaker architectures.
@@ -178,7 +174,7 @@ For an effectful step $s$, the harness crash window is the open time interval $W
 
 \subsection{Three Distributed Failure Modes Across \texorpdfstring{$W(s)$}{W(s)}}
 When a worker crashes at time $t_c \in W(s)$, all volatile memory in the worker (including LLM generation state, step counters, and the RPC response payload $v(s)$ returned at $t_{\mathrm{commit}}(s)$) is destroyed:
-\begin{enumerate}[leftmargin=1.5em]
+\begin{enumerate}
   \item \emph{Post-crash key drift and positional collision:} Upon restart from $C$, an LLM planner re-synthesizing steps after $C$ can alter cosmetic JSON fields (e.g., changing \texttt{"memo": "refund case 401"} to \texttt{"memo": "post-crash retry refund"}), causing content-hash keys $K_{\mathrm{hash}}(s) = \mathrm{SHA256}(\mathit{action}, \mathit{args})$ to miss at $T$ and commit a duplicate effect. Alternatively, if the recovering agent inserts a diagnostic read step before retrying $s$, positional keys $K_{\mathrm{pos}}(s) = (\mathit{wid}, i, \mathit{action})$ shift from index $i$ to $i' \neq i$, causing both duplicate commits for $s$ and erroneous suppression if $K_{\mathrm{pos}}$ collides with an already-committed step at $i'$.
   \item \emph{Overlapping stale workers and dual-recovery races:} Under container health-check timeouts, a paused worker $H_{\mathrm{old}}$ at epoch $e_0$ may resume network I/O after recovery worker $H_{\mathrm{rec}}$ starts, or two recovery instances $R_1, R_2$ may launch simultaneously. Without atomic server-allocated fencing tokens, $H_{\mathrm{old}}$ can emit a reworded retry that bypasses seen-key sets, or $R_1$ and $R_2$ can acquire identical client-incremented epochs and concurrently mint distinct claim-time keys for downstream steps.
   \item \emph{Downstream dataflow severance:} Consider a DAG edge $(s_0 \to s_1)$ where $s_1$'s input arguments depend on the dynamic output $v(s_0)$ generated by $T$ at $t_{\mathrm{commit}}(s_0)$ (such as a transaction receipt ID or resource handle). If $t_c \in W(s_0)$ and $T$'s idempotent receiver suppresses the post-crash retry by returning status \texttt{DUPLICATE\_SUPPRESSED} without replaying $v(s_0)$, the workflow preserves at-most-once safety on $s_0$ at the cost of corrupting or stalling $s_1$.
@@ -212,7 +208,7 @@ To separate business intent from mutable LLM phrasing and plan-step numbering, \
 \end{table}
 
 \emph{Identity Extraction and Declarative Occurrence Binding (\texttt{claimfence/\allowbreak extractor.py}):} Mapping a raw LLM tool call to $(\mathit{action}, \mathit{target}, \mathit{occurrence})$ without conflating post-crash retries with distinct business operations requires a deterministic, stateless harness extractor $E(\mathit{call}, \Sigma_{\mathrm{wf}})$:
-\begin{enumerate}[leftmargin=1.5em]
+\begin{enumerate}
   \item \emph{Schema action routing:} Read-only diagnostic calls ($\mathit{action} \in \mathcal{A}_{\mathrm{diag}}$, e.g., \texttt{check\_account\_status}) bypass $L$ without mutating claim state; unregistered effectful actions fail closed.
   \item \emph{Entity-ID canonicalization:} A domain normalizer extracts and lowercases canonical entity identifiers while stripping whitespace, delimiter drift, and surface annotations (e.g., normalizing \texttt{"CUST\_1042"} or \texttt{"customer cust-1042 (retry)"} to \texttt{"cust-1042"}, and \texttt{"finding\_r0\_b1\_rpl"} to \texttt{"finding-r0-b1"} in E2b).
   \item \emph{Declarative task-ordinal \texttt{occurrence} (never attempt counting):} Legitimate workflows occasionally execute multiple distinct operations with the \emph{same} $\mathit{action}$ on the \emph{same} $\mathit{target}$, such as two separate \texttt{issue\_refund} calls on \texttt{cust-1042} (\texttt{occurrence=0} for the primary item refund and \texttt{occurrence=1} for a separately authorized shipping-fee refund). Crucially, \texttt{occurrence} is bound from an explicit task/line-item ordinal field in the structured tool schema (defaulting to $0$) rather than an auto-incrementing per-call attempt counter. Consequently, when a recovering LLM superfluously re-emits an already-settled primary refund $196$ times (Table~\ref{tab:openai}), every re-emission carries \texttt{occurrence=0} and hits the existing committed claim in $L$. Where the workflow specification defines a per-entity authorization bound $\text{max\_occ}(\mathit{action}, \mathit{target})$ (e.g., $\text{max\_occ}=0$ when only one refund is authorized), the extractor rejects any post-crash planner hallucination proposing $\texttt{occurrence} > \text{max\_occ}$ prior to claim creation (\S\ref{sec:eval_proxy}).
@@ -221,7 +217,7 @@ To separate business intent from mutable LLM phrasing and plan-step numbering, \
 \emph{Serialized Create-or-Reuse:} Before invoking $T$, worker $H_j$ executes an atomic \texttt{create\_or\_reuse(\allowbreak wid,\allowbreak\ uid,\allowbreak\ action,\allowbreak\ target,\allowbreak\ args,\allowbreak\ epoch,\allowbreak\ occurrence)} on $L$: (1)~acquire an exclusive per-workflow store lock and refresh tail state; (2)~if $(\mathit{action}, \mathit{target}, \mathit{occurrence})$ already exists in $L$, return \texttt{(existing\_record,\allowbreak\ reused=True)} with its frozen \texttt{key} and cached \texttt{result}, minting no new key; (3)~otherwise, mint a fresh key $k$, persist \texttt{CLAIM} durably to $L$, and release the lock before dispatching the RPC.
 
 \emph{Single-Host and Disaggregated Multi-Node Storage Backends:} Because POSIX \texttt{fcntl.flock} and SQLite WAL require a single kernel or shared-POSIX lock manager and do not synchronize independent VM nodes over network filesystems, \CF{} ships three interchangeable backends sharing the same \texttt{ClaimStore} interface:
-\begin{itemize}[leftmargin=1.4em]
+\begin{itemize}
   \item \texttt{IndexedJSONLClaimStore} \emph{(single-host / shared-POSIX):} Maintains an in-memory $O(1)$ hash index over $(\mathit{action}, \mathit{target}, \mathit{occurrence})$ and $\texttt{key}$, tracking file inode and byte offset for incremental tail parsing under \texttt{fcntl.flock}. Torn trailing bytes left by mid-write crashes are truncated (\texttt{ftruncate}) prior to appending; supports both \texttt{os.fsync} and hardware \texttt{fcntl.\allowbreak F\_FULLFSYNC}.
   \item \texttt{SQLite\allowbreak WAL\allowbreak Claim\allowbreak Store} \emph{(single-host multi-worker):} Uses \texttt{PRAGMA journal\_\allowbreak mode=WAL} and \texttt{PRAGMA synchronous=\allowbreak FULL} with \texttt{BEGIN IMMEDIATE} serialization and a unique composite B-tree index on \texttt{(action,\allowbreak\ target,\allowbreak\ occurrence)}.
   \item \texttt{HTTPClaimStore} \emph{(disaggregated multi-node, \texttt{claimfence/\allowbreak network\_store.py}):} Provides linearizable cross-node \texttt{create\_or\_reuse}, \texttt{append\_commit}, and server-verified log-fenced checkpointing over persistent HTTP/1.1 connections backed by a remote transactional state coordinator, requiring zero shared local filesystem between primary and failover VMs. In cloud databases, the same contract maps to a single linearizable upsert (\texttt{INSERT ... ON CONFLICT (wid, action, target, occurrence) DO NOTHING} in PostgreSQL/CockroachDB, conditional \texttt{PutItem} in DynamoDB, or \texttt{Txn} compare-and-swap in \texttt{etcd}).
@@ -229,7 +225,7 @@ To separate business intent from mutable LLM phrasing and plan-step numbering, \
 
 \subsection{Cooperative \texorpdfstring{\texttt{CAS\_inc}}{CAS\_inc} Fencing and Outbox Sidecar Proxy}
 \emph{1) Cooperative Service Endpoint:} A native \CF{}-aware receiver $T$ exposes two atomic endpoints backed by per-workflow locks and an append-only ledger:
-\begin{itemize}[leftmargin=1.4em]
+\begin{itemize}
   \item \texttt{POST /fence \{wid, holder\_id\}}: Executes server-side atomic compare-and-increment:
   \begin{equation}\label{eq:cas_fence}
     (e_{\max}[\mathit{wid}],\, h[\mathit{wid}]) \leftarrow (e_{\max}[\mathit{wid}] + 1,\, \mathit{holder\_id}),
@@ -264,7 +260,7 @@ To separate business intent from mutable LLM phrasing and plan-step numbering, \
 \end{figure}
 
 Algorithm~\ref{alg:recovery} specifies crash recovery. Three properties distinguish this recovery path from trajectory resume and keys-only retry:
-\begin{enumerate}[leftmargin=1.5em]
+\begin{enumerate}
   \item \emph{Zero LLM involvement and crash-idempotent settlement:} Lines~2--6 settle every uncommitted pre-crash claim using the exact \texttt{key} and \texttt{args} frozen in $L$ prior to the crash, recording \texttt{COMMIT} with $v(s)$ before the LLM planner is invoked. Reconciliation is itself crash-safe: if $h_{\mathrm{rec}}$ crashes between Line~3 ($T.\textsc{Call}$ commits at $T$) and Line~5 ($L.\textsc{AppendCommit}$), the next recovery $h'_{\mathrm{rec}}$ acquires $e' > e_{\mathrm{new}}$, observes $c \in L.\textsc{Uncommitted}()$, replays $c.\mathit{key}$ to receive \texttt{duplicate\_suppressed} with the saved $r.\mathit{result}$ from $T$, and completes Line~5 without duplicating the mutation.
   \item \emph{Log-fenced parallel branch frontiers:} For parallel fan-out workflows (e.g., \texttt{LangGraph} \texttt{Send} subgraphs), $C$ stores one atomic completion record per branch rather than a single read-modify-write checkpoint file, avoiding cross-thread write races. Recovery marks a branch settled in $C$ if and only if \emph{every} effectful step in that branch has a matching \texttt{COMMIT} in $L$.
   \item \emph{Semantic skip with payload injection:} When the resumed LLM planner emits remaining workflow steps (or superfluously re-emits an already-settled step with paraphrased arguments or shifted step indices), \texttt{create\_or\_reuse} matches $(\mathit{action}, \mathit{target}, \mathit{occurrence})$ in $O(1)$ time, skips the external RPC if \texttt{committed=True}, and returns the cached $v(s)$ directly to downstream steps.
@@ -278,7 +274,7 @@ Algorithm~\ref{alg:recovery} specifies crash recovery. Three properties distingu
 
 \begin{theorem}[Retry-Time Key Fragility and Multi-Crash Decay]\label{thm:fragility}
 Let $K$ be any retry-time key derivation computed without a pre-invocation durable claim record.
-\begin{enumerate}[leftmargin=1.5em]
+\begin{enumerate}
   \item \emph{(Duplication and Collision Omission):} If two admissible executions of the same logical effect $e$ before and after a crash in $W(s)$ yield $k = K(\sigma_{\mathrm{pre}}) \neq K(\sigma_{\mathrm{post}}) = k'$ due to mutable planner inputs (argument phrasing or shifted step positions), and $k'$ is unseen at $T$, an atomic key-deduplicating receiver commits $e$ twice. Conversely, if $k'$ collides with a committed key $k(s^\dagger)$ of a distinct step $s^\dagger \neq s$, $T$ erroneously suppresses $s$, causing an omitted effect.
   \item \emph{(Checkpoint-Time Ledger Exposure):} Any ledger $L_{\mathrm{ckpt}}$ written atomically at $t_{\mathrm{ckpt}}(s)$ satisfies $L_{\mathrm{ckpt}}(t_c) = \emptyset$ for step $s$ whenever $t_c \in W(s) = (t_{\mathrm{commit}}(s), t_{\mathrm{ckpt}}(s))$, reducing post-crash recovery of $s$ to unlogged retry.
   \item \emph{(Exponential Multi-Crash Decay):} Across a long-horizon workflow experiencing $k$ independent crashes, each landing in $W(\cdot)$ with probability $p_w$ and inducing unrecovered retry failure (duplication, collision omission, or lost return payload) with conditional probability $q_{\mathrm{err}} > 0$, the probability of strict end-to-end correctness decays geometrically as $(1 - p_w q_{\mathrm{err}})^k \to 0$ as $k$ grows.
@@ -376,7 +372,7 @@ Canonical Keys ($K_{\mathrm{canon}}$, no WAL) & \ChaosCanonDup{} & 0.0000 & 0.72
 
 \begin{figure}[!t]
   \centering
-  \includegraphics[width=0.99\columnwidth]{fig2_chaos_and_horizon.pdf}
+  \includegraphics[width=0.93\columnwidth]{fig2_chaos_and_horizon.pdf}
   \caption{(a)~Six-architecture comparison across $1{,}500$ paired workflows per condition. (b)~Strict end-to-end correctness across multi-crash horizons $k \in \{1, 2, 3, 4\}$ ($1{,}000$ workflows/point), validating Theorem~\ref{thm:fragility}(3).}
   \label{fig:chaos}
 \end{figure}
@@ -406,7 +402,7 @@ To test whether real open-weight and proprietary LLMs organically exhibit key-br
 
 \begin{figure}[!t]
   \centering
-  \includegraphics[width=0.99\columnwidth]{fig3_multimodel_sigkill.pdf}
+  \includegraphics[width=0.93\columnwidth]{fig3_multimodel_sigkill.pdf}
   \caption{Cross-model real \texttt{SIGKILL} evaluation on Apple M5 Pro across \texttt{Qwen2.5-3B} and \texttt{Qwen2.5-7B}: (a)~duplicate-effect episode rate; (b)~strict chained workflow completion rate.}
   \label{fig:multimodel}
 \end{figure}
@@ -435,7 +431,7 @@ Table~\ref{tab:multimodel} and Fig.~\ref{fig:multimodel} reveal an instructive b
 
 \subsection{Production \texttt{LangGraph} Deployment and Boundary Tests}\label{sec:eval_lg}
 To validate integration with a production multi-actor graph runtime, we ported \CF{} to \texttt{LangGraph}~\cite{langgraph2026} across two topologies driving separate-process HTTP and durable file-append tools under external watchdog \texttt{SIGKILL}:
-\begin{itemize}[leftmargin=1.4em]
+\begin{itemize}
   \item \emph{Linear workflow (\texttt{v1}, $180$ episodes):} Reproduces sandbox ordering under real process kills: \CF{} records $0.0000$ duplicates ($1.0000$ exactly-once) versus $0.8333$ for trajectory baseline and $0.2333$ for positional keys ($180/180$ stale-epoch probes fenced).
   \item \emph{Branching parallel \texttt{Send} graph (\texttt{v2}, $540$ episodes across 3 planner campaigns):} Implements a supervisor routing via \texttt{add\_conditional\_edges} to either a 3-worker parallel \texttt{Send} compiled subgraph (with reducer fan-in and a 1\,s backoff retry loop) or an escalation alert chain. Watchdog kills target three windows: \texttt{mid\_fanout} ($100\%$ verified partial branch completion at kill time), \texttt{retry\_backoff} (claim durable, uncommitted), and \texttt{post\_branch} (liveness check). Across scripted, uniform \texttt{gpt-4o-mini}, and cost-aware mixed \texttt{gpt-4o-mini} ($135$ escalate / $79$ fan-out decisions, $34/34$ cross-generation consistency) campaigns ($60$ episodes/condition each), \CF{} achieves \textbf{0.0000} duplicates and \textbf{1.0000} completion with $0$ recovery failures, whereas baseline duplicates in $48/60$ ($0.8000$) episodes ($30/30$ \texttt{mid\_fanout} plus $18/18$ \texttt{retry\_backoff}).
 \end{itemize}
@@ -463,7 +459,7 @@ E5 & Paired timing & Seed-matched run & 60 & \textbf{0} & \textbf{60/60} \\
 
 \begin{figure}[!t]
   \centering
-  \includegraphics[width=0.99\columnwidth]{fig4_langgraph_and_ablation.pdf}
+  \includegraphics[width=0.93\columnwidth]{fig4_langgraph_and_ablation.pdf}
   \caption{(a)~Empirical key-stability boundary in \texttt{LangGraph} v2 (stable branch IDs vs.\ E2a positional rotation and E2b target paraphrase). (b)~$1{,}500$-episode orthogonal component ablation isolating claim logging and epoch fencing.}
   \label{fig:ablation}
 \end{figure}
@@ -495,14 +491,14 @@ Legacy Unindexed JSONL (\texttt{fsync}) & 0.14\,ms & 0.13\,ms & 0.51\,ms / 1.40\
 
 \begin{figure}[!t]
   \centering
-  \includegraphics[width=0.99\columnwidth]{fig5_storage_scaling.pdf}
+  \includegraphics[width=0.93\columnwidth]{fig5_storage_scaling.pdf}
   \caption{(a)~Identity lookup p50 latency from $N=100$ to $10{,}000$ claims ($20{,}000$ log records), demonstrating a \ScaleTenKSpeedup{} speedup over unindexed JSONL scanning. (b)~Per-step write latency across OS buffer flush (\texttt{os.fsync}), SQLite WAL, and hardware NAND flush (\texttt{F\_FULLFSYNC}).}
   \label{fig:storage}
 \end{figure}
 
 \begin{figure}[!t]
   \centering
-  \includegraphics[width=0.99\columnwidth]{fig6_concurrency_throughput.pdf}
+  \includegraphics[width=0.93\columnwidth]{fig6_concurrency_throughput.pdf}
   \caption{Multi-worker HTTP receiver scaling ($K \in \{1..32\}$ concurrent workflows): (a)~commit throughput (\texttt{ops/s}); (b)~p50 and p99 RPC latency compared against a global-lock baseline.}
   \label{fig:concurrency}
 \end{figure}
@@ -558,5 +554,25 @@ During the preparation of this work, the authors used AI-assisted tools to suppo
 
 \bibliographystyle{IEEEtran}
 \bibliography{references}
+
+\begin{IEEEbiographynophoto}{Mohammed Kamran Syed}
+is an IEEE Independent Researcher based in Mountain House, CA, USA. His research interests include distributed systems, fault-tolerant workflow orchestration, durable execution middleware, and crash consistency for stateful autonomous systems.
+\end{IEEEbiographynophoto}
+\vspace{-3.2em}
+\begin{IEEEbiographynophoto}{Anudeep Rentala}
+is an IEEE Independent Researcher based in Fremont, CA, USA. His research interests include cloud service architectures, distributed reliability engineering, and fault-tolerant systems software.
+\end{IEEEbiographynophoto}
+\vspace{-3.2em}
+\begin{IEEEbiographynophoto}{Somesh Rahul}
+is an IEEE Independent Researcher based in Fremont, CA, USA. His research interests include distributed data infrastructure, reproducible systems benchmarking, and cloud service orchestration.
+\end{IEEEbiographynophoto}
+\vspace{-3.2em}
+\begin{IEEEbiographynophoto}{Raghuram Malpe Pai}
+is an IEEE Independent Researcher based in Sunnyvale, CA, USA. His research interests include formal verification, distributed protocol modeling, and dependable computing systems.
+\end{IEEEbiographynophoto}
+\vspace{-3.2em}
+\begin{IEEEbiographynophoto}{Krishna Suman Dara}
+is an IEEE Independent Researcher based in Sunnyvale, CA, USA. His research interests include scalable service middleware, concurrency control, and empirical evaluation of distributed systems.
+\end{IEEEbiographynophoto}
 
 \end{document}
